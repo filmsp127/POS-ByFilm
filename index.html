@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="theme-color" content="#1a1a2e" />
+    <title>Modern POS - ระบบขายหน้าร้าน</title>
+
+    <!-- External CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Loading Screen -->
+      <div
+        id="loadingScreen"
+        class="fixed inset-0 flex items-center justify-center z-50 bg-white"
+      >
+        <div class="text-center">
+          <div class="spinner mx-auto mb-4"></div>
+          <h2 class="text-gray-700 text-xl">กำลังโหลดระบบ...</h2>
+        </div>
+      </div>
+
+      <!-- Main POS Interface -->
+      <div id="posInterface" class="flex flex-col h-full bg-gray-50">
+        <!-- Top Bar -->
+        <div class="top-bar p-3 flex items-center justify-between">
+          <button onclick="BackOffice.openMenu()" class="menu-btn">
+            <i class="fas fa-bars text-xl"></i>
+          </button>
+
+          <div class="total-display">
+            <div class="text-xs opacity-90">ยอดรวม</div>
+            <div class="text-xl font-bold" id="totalDisplay">฿0.00</div>
+          </div>
+
+          <button onclick="Cart.open()" class="cart-btn">
+            <i class="fas fa-shopping-basket text-xl"></i>
+            <span id="cartCount">0</span>
+          </button>
+        </div>
+
+        <!-- Category Tabs -->
+        <div class="px-3 pb-3 overflow-x-auto">
+          <div class="flex gap-3" id="categoryTabs">
+            <!-- Categories will be loaded here -->
+          </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="flex-1 overflow-y-auto px-3 pb-3">
+          <div class="products-container">
+            <div
+              class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+              id="productsGrid"
+            >
+              <!-- Products will be loaded here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dynamic Modals Container -->
+      <div id="modalsContainer"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-20 right-4 z-50 space-y-2"></div>
+
+    <!-- Core Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/pos.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/payment.js"></script>
+    <script src="js/products.js"></script>
+    <script src="js/backoffice.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/settings.js"></script>
+
+    <!-- Initialize App -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        App.init();
+      });
+    </script>
+  </body>
+</html>
