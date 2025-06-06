@@ -452,25 +452,17 @@ setInterval(() => {
         this.loadDefaultCategories();
       }
 
-      // Load products - filter out sample products
-      const productsSnapshot = await storeRef.collection("products").get();
-      const products = [];
-      const defaultProductNames = [
-        "อเมริกาโน่เย็น",
-        "อเมริกาโน่ร้อน",
-        "คาปูชิโน่",
-      ];
+     // Load products
+const productsSnapshot = await storeRef.collection("products").get();
+const products = [];
 
-      productsSnapshot.forEach((doc) => {
-        const data = doc.data();
-        // Filter out sample products
-        if (!defaultProductNames.includes(data.name)) {
-          products.push({
-            ...data,
-            id: data.id || parseInt(doc.id),
-          });
-        }
-      });
+productsSnapshot.forEach((doc) => {
+  const data = doc.data();
+  products.push({
+    ...data,
+    id: data.id || parseInt(doc.id),
+  });
+});
 
       this.state.products = products;
       console.log("Loaded products:", products.length);
