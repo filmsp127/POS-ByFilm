@@ -854,6 +854,8 @@ setInterval(() => {
   },
 
    async saveData(skipFirebaseSync = false) {
+     console.log("💾 saveData called, skipFirebaseSync:", skipFirebaseSync);
+    console.log("Products to save:", this.state.products);
     try {
       const storeId = this.state.currentStoreId;
       if (!storeId) {
