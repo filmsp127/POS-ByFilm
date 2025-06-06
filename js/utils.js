@@ -68,15 +68,40 @@ const Utils = {
     const modal = document.createElement("div");
     modal.className =
       "fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4";
-    modal.innerHTML = `
-            <div class="bg-white rounded-xl shadow-2xl ${
-              options.size || "w-full max-w-md"
-            } modal-content">
-                ${content}
-            </div>
-        `;
+    
+    // Check if mobile
+    const isMobile = window.innerWidth <= 640;
+    const sizeClass = options.size || "w-full max-w-md";
+    
+    // Add mobile fullscreen class if needed
+    const modalClass = isMobile && options.mobileFullscreen !== false 
+      ? `${sizeClass} mobile-fullscreen` 
+      : sizeClass;
+    
+    // Check if content has modal structure
+    const hasModalStructure = content.includes('modal-with-footer') || 
+                            content.includes('modal-body') || 
+                            content.includes('modal-footer');
+    
+    if (hasModalStructure) {
+      // Content already has proper structure
+      modal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-2xl ${modalClass} modal-content">
+          ${content}
+        </div>
+      `;
+    } else {
+      // Wrap content in proper structure
+      modal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-2xl ${modalClass} modal-content modal-with-footer">
+          <div class="modal-body">
+            ${content}
+          </div>
+        </div>
+      `;
+    }
 
-    if (options.closeOnClick) {
+    if (options.closeOnClick !== false) {
       modal.addEventListener("click", (e) => {
         if (e.target === modal) {
           modal.remove();
@@ -85,6 +110,18 @@ const Utils = {
     }
 
     document.getElementById("modalsContainer").appendChild(modal);
+    
+    // Focus management for mobile
+    if (isMobile) {
+      // Find first input and focus it after a delay
+      setTimeout(() => {
+        const firstInput = modal.querySelector('input:not([type="hidden"]), textarea, select');
+        if (firstInput) {
+          firstInput.focus();
+        }
+      }, 100);
+    }
+    
     return modal;
   },
 
