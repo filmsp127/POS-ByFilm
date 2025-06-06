@@ -707,7 +707,7 @@ setInterval(() => {
         this.state.settings.storePhone = storeData.phone || "";
 
         // Save to localStorage
-        this.saveData();
+        this.saveData(true);
       }
     });
     this.unsubscribers.push(storeUnsub);
@@ -843,7 +843,7 @@ setInterval(() => {
     }
   },
 
-   async saveData() {
+   async saveData(skipFirebaseSync = false) {
     try {
       const storeId = this.state.currentStoreId;
       if (!storeId) {
@@ -856,15 +856,21 @@ setInterval(() => {
       localStorage.setItem(storageKey, JSON.stringify(this.state));
       console.log("💾 Data saved locally for store:", storeId);
 
-      // Always sync to Firebase immediately if authenticated
-      if (window.FirebaseService && FirebaseService.isAuthenticated()) {
-        // Don't wait for sync to complete, but handle errors
-        this.syncWithFirebase().then(() => {
-          console.log("☁️ Data synced to cloud");
-        }).catch(error => {
-          console.error("❌ Failed to sync to cloud:", error);
-          Utils.showToast("ไม่สามารถซิงค์ข้อมูลได้ กรุณาตรวจสอบการเชื่อมต่อ", "warning");
-        });
+      // Only sync to Firebase if not skipped and authenticated
+      if (!skipFirebaseSync && window.FirebaseService && FirebaseService.isAuthenticated()) {
+        // Debounce Firebase sync to prevent rapid firing
+        if (this.syncTimeout) {
+          clearTimeout(this.syncTimeout);
+        }
+        
+        this.syncTimeout = setTimeout(() => {
+          this.syncWithFirebase().then(() => {
+            console.log("☁️ Data synced to cloud");
+          }).catch(error => {
+            console.error("❌ Failed to sync to cloud:", error);
+            Utils.showToast("ไม่สามารถซิงค์ข้อมูลได้ กรุณาตรวจสอบการเชื่อมต่อ", "warning");
+          });
+        }, 2000); // Wait 2 seconds before syncing
       }
     } catch (error) {
       console.error("❌ Error saving data:", error);
