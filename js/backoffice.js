@@ -950,46 +950,81 @@ const BackOffice = {
 
   // Image handling functions
   handleImageUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+  const file = event.target.files[0];
+  if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      // 5MB limit
-      Utils.showToast("ไฟล์ใหญ่เกินไป (ไม่เกิน 5MB)", "error");
-      return;
-    }
-
+  // Check file size (limit to 500KB for safety)
+  if (file.size > 500 * 1024) {
+    // Resize image
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // Create canvas
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Calculate new dimensions (max 400px)
+        let width = img.width;
+        let height = img.height;
+        const maxSize = 400;
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+        
+        // Resize
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to base64 with reduced quality
+        const resizedImage = canvas.toDataURL('image/jpeg', 0.7);
+        
+        // Check final size
+        const finalSize = resizedImage.length * 0.75; // Approximate bytes
+        if (finalSize > 900000) { // 900KB limit
+          Utils.showToast("รูปภาพยังใหญ่เกินไป กรุณาใช้รูปที่เล็กกว่า หรือใช้ Emoji แทน", "error");
+          return;
+        }
+        
+        document.getElementById("productImage").value = resizedImage;
+        document.getElementById("productImageType").value = "url";
+        this.updateImagePreview(resizedImage, "url");
+        
+        // Clear other inputs
+        document.getElementById("productEmoji").value = "";
+        document.getElementById("productImageUrl").value = "";
+        
+        Utils.showToast("ปรับขนาดรูปภาพแล้ว", "success");
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  } else {
+    // File size OK, proceed normally
     const reader = new FileReader();
     reader.onload = (e) => {
       const imageData = e.target.result;
       document.getElementById("productImage").value = imageData;
       document.getElementById("productImageType").value = "url";
       this.updateImagePreview(imageData, "url");
-
+      
       // Clear other inputs
       document.getElementById("productEmoji").value = "";
       document.getElementById("productImageUrl").value = "";
     };
     reader.readAsDataURL(file);
-  },
-
-  handleImageUrl(url) {
-    if (!url) return;
-
-    // Validate URL
-    try {
-      new URL(url);
-      document.getElementById("productImage").value = url;
-      document.getElementById("productImageType").value = "url";
-      this.updateImagePreview(url, "url");
-
-      // Clear other inputs
-      document.getElementById("productEmoji").value = "";
-      document.getElementById("productImageFile").value = "";
-    } catch (e) {
-      Utils.showToast("URL รูปภาพไม่ถูกต้อง", "error");
-    }
-  },
+  }
+},
 
   handleEmoji(emoji) {
     if (!emoji) return;
