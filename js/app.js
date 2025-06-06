@@ -1180,57 +1180,6 @@ setInterval(() => {
   }
 },
 
-  async saveProduct(event) {
-  event.preventDefault();
-
-  const productId = document.getElementById("editProductId").value;
-  const productData = {
-    code: document.getElementById("productCode").value,
-    name: document.getElementById("productName").value,
-    price: parseFloat(document.getElementById("productPrice").value),
-    cost: parseFloat(document.getElementById("productCost").value) || 0,
-    stock: parseInt(document.getElementById("productStock").value),
-    category: parseInt(document.getElementById("productCategory").value),
-    barcode: document.getElementById("productBarcode").value,
-    image: document.getElementById("productImage").value || "📦",
-    imageType: document.getElementById("productImageType").value,
-  };
-
-  Utils.showLoading("กำลังบันทึกสินค้า...");
-
-  try {
-    if (productId) {
-      // Update existing product
-      const success = await App.updateProduct(parseInt(productId), productData);
-      if (success) {
-        Utils.hideLoading();
-        Utils.showToast("แก้ไขสินค้าสำเร็จ", "success");
-      } else {
-        throw new Error("Failed to update product");
-      }
-    } else {
-      // Add new product
-      const newProduct = await App.addProduct(productData);
-      if (newProduct) {
-        Utils.hideLoading();
-        Utils.showToast("เพิ่มสินค้าสำเร็จ", "success");
-      } else {
-        throw new Error("Failed to add product");
-      }
-    }
-
-    // Reload products list
-    this.loadProductsList();
-    this.closeProductModal();
-    POS.refresh();
-    
-  } catch (error) {
-    Utils.hideLoading();
-    console.error("Save product error:", error);
-    Utils.showToast("บันทึกสินค้าไม่สำเร็จ: " + error.message, "error");
-  }
-},
-
   async updateProduct(id, updates) {
   try {
     const index = this.state.products.findIndex((p) => p.id === id);
