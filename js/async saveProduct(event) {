@@ -1025,7 +1025,7 @@ const BackOffice = {
         `;
   },
 
-  saveProduct(event) {
+  async saveProduct(event) {
     event.preventDefault();
 
     const productId = document.getElementById("editProductId").value;
@@ -1035,7 +1035,7 @@ const BackOffice = {
       price: parseFloat(document.getElementById("productPrice").value),
       cost: parseFloat(document.getElementById("productCost").value) || 0,
       stock: parseInt(document.getElementById("productStock").value),
-      category: parseInt(document.getElementById("productCategory").value), // แน่ใจว่าเป็น integer
+      category: parseInt(document.getElementById("productCategory").value),
       barcode: document.getElementById("productBarcode").value,
       image: document.getElementById("productImage").value || "📦",
       imageType: document.getElementById("productImageType").value,
@@ -1048,15 +1048,17 @@ const BackOffice = {
       App.addProduct(productData);
       Utils.showToast("เพิ่มสินค้าสำเร็จ", "success");
     }
-    // Sync to Firebase if available
-    if (window.FirebaseService && FirebaseService.isAuthenticated()) {
-      App.syncWithFirebase();
+    
+    // Force sync immediately
+    try {
+      await App.syncWithFirebase();
+      console.log("Product synced to Firebase");
+    } catch (error) {
+      console.error("Sync error:", error);
     }
 
     this.loadProductsList();
     this.closeProductModal();
-
-    // Refresh POS display
     POS.refresh();
   },
 
