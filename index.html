@@ -671,5 +671,16 @@
       });
   });
 </script>
+    <script>
+// Temporary fix
+if (typeof BackOffice === 'undefined') {
+    console.error('BackOffice not loaded, creating temporary fix');
+    window.BackOffice = {
+        openMenu: function() {
+            alert('BackOffice module not loaded properly');
+        }
+    };
+}
+</script>
   </body>
 </html>
