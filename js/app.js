@@ -10,7 +10,7 @@ const App = {
     currentCategory: "all",
     currentStoreId: null,
     settings: {
-      storeName: "Modern POS",
+      storeName: "SP24 POS",
       storeAddress: "",
       storePhone: "",
       tax: 7,
@@ -124,7 +124,7 @@ const App = {
       console.log(`🏪 Loading data for store: ${store.name}`);
 
       // Update settings with store info
-      this.state.settings.storeName = store.name || "Modern POS";
+      this.state.settings.storeName = store.name || "SP24 POS";
       this.state.settings.storeAddress = store.address || "";
       this.state.settings.storePhone = store.phone || "";
 
@@ -436,7 +436,7 @@ setInterval(() => {
           };
         }
         // Update store name
-        this.state.settings.storeName = storeData.name || "Modern POS";
+        this.state.settings.storeName = storeData.name || "SP24 POS";
         this.state.settings.storeAddress = storeData.address || "";
         this.state.settings.storePhone = storeData.phone || "";
       }
@@ -767,7 +767,7 @@ setInterval(() => {
         }
 
         // Update store info
-        this.state.settings.storeName = storeData.name || "Modern POS";
+        this.state.settings.storeName = storeData.name || "SP24 POS";
         this.state.settings.storeAddress = storeData.address || "";
         this.state.settings.storePhone = storeData.phone || "";
 
