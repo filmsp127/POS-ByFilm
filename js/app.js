@@ -423,6 +423,8 @@ setInterval(() => {
       const storeId = FirebaseService.currentStore.id;
       const storeRef = FirebaseService.db.collection("stores").doc(storeId);
 
+      console.log("🔄 Loading data from Firebase for store:", storeId);
+
       // Load store info
       const storeDoc = await storeRef.get();
       if (storeDoc.exists) {
@@ -439,68 +441,108 @@ setInterval(() => {
         this.state.settings.storePhone = storeData.phone || "";
       }
 
+      // Clear existing data first to ensure fresh data
+      this.state.categories = [];
+      this.state.products = [];
+      this.state.members = [];
+      this.state.sales = [];
+
       // Load categories
       const categoriesSnapshot = await storeRef.collection("categories").get();
       const categories = [];
       categoriesSnapshot.forEach((doc) => {
-        categories.push({ ...doc.data(), id: parseInt(doc.id) });
+        const data = doc.data();
+        categories.push({ 
+          ...data, 
+          id: data.id || parseInt(doc.id) 
+        });
       });
+      
       if (categories.length > 0) {
         this.state.categories = categories;
+        console.log("✅ Loaded categories:", categories.length);
       } else {
         // If no categories, create defaults
         this.loadDefaultCategories();
+        // Sync default categories to Firebase
+        await this.syncCategoriesToFirebase();
       }
 
-      // Load products
-const productsSnapshot = await storeRef.collection("products").get();
-console.log("📦 Loading products from Firebase, found:", productsSnapshot.size);
+      // Load products - ปรับปรุงการ load ให้แม่นยำ
+      const productsSnapshot = await storeRef.collection("products").get();
+      console.log("📦 Loading products from Firebase, found:", productsSnapshot.size);
 
-const products = [];
-productsSnapshot.forEach((doc) => {
-  const data = doc.data();
-  console.log("Product from Firebase:", doc.id, data.name);
-  products.push({
-    ...data,
-    id: data.id || parseInt(doc.id),
-  });
-});
+      const products = [];
+      productsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        // ตรวจสอบว่ามีข้อมูลครบถ้วน
+        if (data && data.name) {
+          console.log("Product from Firebase:", doc.id, data.name);
+          products.push({
+            ...data,
+            id: data.id || parseInt(doc.id),
+          });
+        }
+      });
 
       this.state.products = products;
-      console.log("Loaded products:", products.length);
+      console.log("✅ Loaded products:", products.length);
 
       // Load members
       const membersSnapshot = await storeRef.collection("members").get();
       const members = [];
       membersSnapshot.forEach((doc) => {
         const data = doc.data();
-        members.push({
-          ...data,
-          id: data.id || parseInt(doc.id),
-        });
+        if (data) {
+          members.push({
+            ...data,
+            id: data.id || parseInt(doc.id),
+          });
+        }
       });
       this.state.members = members;
+      console.log("✅ Loaded members:", members.length);
 
-      // Load sales (last 100)
-      const salesSnapshot = await storeRef
-        .collection("sales")
-        .orderBy("timestamp", "desc")
-        .limit(100)
-        .get();
-      const sales = [];
-      salesSnapshot.forEach((doc) => {
-        const data = doc.data();
-        sales.push({
-          ...data,
-          id: parseInt(doc.id),
+      // Load sales (last 100) - ปรับปรุงการ handle timestamp
+      try {
+        const salesSnapshot = await storeRef
+          .collection("sales")
+          .orderBy("timestamp", "desc")
+          .limit(100)
+          .get();
+        
+        const sales = [];
+        salesSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data) {
+            sales.push({
+              ...data,
+              id: data.id || parseInt(doc.id),
+              // Ensure timestamp exists
+              timestamp: data.timestamp || data.date || Date.now()
+            });
+          }
         });
-      });
-      this.state.sales = sales.reverse(); // Sort from oldest to newest
+        this.state.sales = sales.reverse(); // Sort from oldest to newest
+        console.log("✅ Loaded sales:", sales.length);
+      } catch (error) {
+        console.warn("⚠️ Error loading sales (might be no sales yet):", error);
+        this.state.sales = [];
+      }
 
-      console.log("✅ Data loaded from Firebase");
+      console.log("✅ All data loaded from Firebase successfully");
 
       // Save to localStorage for offline use
-      this.saveData();
+      this.saveData(true); // Skip Firebase sync since we just loaded from there
+
+      // Force UI refresh
+      if (POS && POS.refresh) {
+        POS.refresh();
+      }
+      if (BackOffice && BackOffice.currentPage) {
+        BackOffice.openPage(BackOffice.currentPage);
+      }
+
     } catch (error) {
       console.error("❌ Error loading from Firebase:", error);
 
@@ -514,9 +556,37 @@ productsSnapshot.forEach((doc) => {
           ...data,
           currentStoreId: this.state.currentStoreId,
         };
+        console.log("📱 Loaded from localStorage instead");
       } else {
         this.loadDefaultDataWithoutProducts();
       }
+    }
+  },
+
+  // Sync categories to Firebase
+  async syncCategoriesToFirebase() {
+    try {
+      if (!FirebaseService.currentStore) return;
+
+      const storeId = FirebaseService.currentStore.id;
+      const batch = FirebaseService.db.batch();
+
+      this.state.categories.forEach((category) => {
+        const categoryRef = FirebaseService.db
+          .collection("stores")
+          .doc(storeId)
+          .collection("categories")
+          .doc(category.id.toString());
+        batch.set(categoryRef, {
+          ...category,
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+
+      await batch.commit();
+      console.log("Categories synced to Firebase");
+    } catch (error) {
+      console.error("Error syncing categories:", error);
     }
   },
 
