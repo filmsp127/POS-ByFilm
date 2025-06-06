@@ -80,19 +80,22 @@ const Products = {
 
   // Get product sales count
   getProductSales(productId) {
-    const sales = App.getSales();
-    let totalQuantity = 0;
+  const sales = App.getSales();
+  let totalQuantity = 0;
 
-    sales.forEach((sale) => {
-      sale.items.forEach((item) => {
-        if (item.id === productId) {
-          totalQuantity += item.quantity;
-        }
-      });
+  sales.forEach((sale) => {
+    // ข้ามบิลที่ถูก refund แล้ว
+    if (sale.refunded) return;
+    
+    sale.items.forEach((item) => {
+      if (item.id === productId) {
+        totalQuantity += item.quantity;
+      }
     });
+  });
 
-    return totalQuantity;
-  },
+  return totalQuantity;
+},
 
   // Get product revenue
   getProductRevenue(productId) {
