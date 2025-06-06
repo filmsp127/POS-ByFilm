@@ -75,6 +75,20 @@ const FirebaseService = {
           await this.selectStore(lastStoreId);
         }
       }
+    // Show notification when data changes from other devices
+      let isFirstLoad = true;
+      this.db.collection('stores').doc(lastStoreId)
+        .collection('products')
+        .onSnapshot((snapshot) => {
+          if (!isFirstLoad) {
+            snapshot.docChanges().forEach((change) => {
+              if (change.type === 'modified') {
+                Utils.showToast(`สินค้า "${change.doc.data().name}" ถูกอัพเดทจากเครื่องอื่น`, "info");
+              }
+            });
+          }
+          isFirstLoad = false;
+        });
     } else {
       this.currentUser = null;
       this.currentStore = null;
