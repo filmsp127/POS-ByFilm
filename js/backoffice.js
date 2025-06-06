@@ -1305,50 +1305,54 @@ const BackOffice = {
 
   showAddMemberModal() {
     const content = `
-      <div class="p-6">
-        <h3 class="text-xl font-bold text-gray-800 mb-4">เพิ่มสมาชิกใหม่</h3>
-        
-        <form onsubmit="BackOffice.saveMember(event)">
-          <div class="space-y-4">
-            <input type="hidden" id="editMemberId">
-            
-            <div>
-              <label class="text-gray-700 text-sm font-medium">ชื่อ-นามสกุล *</label>
-              <input type="text" id="memberName" required
-                     class="w-full mt-1 p-2 rounded-lg border border-gray-300 text-gray-800">
-            </div>
-            
-            <div>
-              <label class="text-gray-700 text-sm font-medium">เบอร์โทร *</label>
-              <input type="tel" id="memberPhone" required pattern="[0-9]{10}"
-                     class="w-full mt-1 p-2 rounded-lg border border-gray-300 text-gray-800"
-                     placeholder="0812345678">
-            </div>
-            
-            <div>
-              <label class="text-gray-700 text-sm font-medium">อีเมล</label>
-              <input type="email" id="memberEmail"
-                     class="w-full mt-1 p-2 rounded-lg border border-gray-300 text-gray-800">
-            </div>
-            
-            <div>
-              <label class="text-gray-700 text-sm font-medium">วันเกิด</label>
-              <input type="date" id="memberBirthdate"
-                     class="w-full mt-1 p-2 rounded-lg border border-gray-300 text-gray-800">
-            </div>
-          </div>
+      <div class="modal-with-footer h-full flex flex-col">
+        <div class="modal-body">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">เพิ่มสมาชิกใหม่</h3>
           
-          <div class="flex gap-3 mt-6">
+          <form onsubmit="BackOffice.saveMember(event)" id="memberForm">
+            <div class="space-y-4">
+              <input type="hidden" id="editMemberId">
+              
+              <div>
+                <label class="text-gray-700 text-sm font-medium">ชื่อ-นามสกุล *</label>
+                <input type="text" id="memberName" required
+                       class="w-full mt-1 p-2 rounded-lg border border-gray-300 text-gray-800">
+              </div>
+              
+              <div>
+                <label class="text-gray-700 text-sm font-medium">เบอร์โทร *</label>
+                <input type="tel" id="memberPhone" required pattern="[0-9]{10}"
+                       class="w-full mt-1 p-2 rounded-lg border border-gray-300 text-gray-800"
+                       placeholder="0812345678">
+              </div>
+              
+              <div>
+                <label class="text-gray-700 text-sm font-medium">อีเมล</label>
+                <input type="email" id="memberEmail"
+                       class="w-full mt-1 p-2 rounded-lg border border-gray-300 text-gray-800">
+              </div>
+              
+              <div>
+                <label class="text-gray-700 text-sm font-medium">วันเกิด</label>
+                <input type="date" id="memberBirthdate"
+                       class="w-full mt-1 p-2 rounded-lg border border-gray-300 text-gray-800">
+              </div>
+            </div>
+          </form>
+        </div>
+        
+        <div class="modal-footer">
+          <div class="flex gap-3">
             <button type="button" onclick="Utils.closeModal(this.closest('.fixed'))"
                     class="flex-1 bg-gray-200 hover:bg-gray-300 py-2 rounded-lg text-gray-800">
               ยกเลิก
             </button>
-            <button type="submit"
+            <button type="submit" form="memberForm"
                     class="flex-1 btn-primary py-2 rounded-lg text-white">
               บันทึก
             </button>
           </div>
-        </form>
+        </div>
       </div>
     `;
 
