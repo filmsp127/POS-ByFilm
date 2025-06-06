@@ -1026,41 +1026,55 @@ const BackOffice = {
   },
 
   async saveProduct(event) {
-    event.preventDefault();
+  event.preventDefault();
 
-    const productId = document.getElementById("editProductId").value;
-    const productData = {
-      code: document.getElementById("productCode").value,
-      name: document.getElementById("productName").value,
-      price: parseFloat(document.getElementById("productPrice").value),
-      cost: parseFloat(document.getElementById("productCost").value) || 0,
-      stock: parseInt(document.getElementById("productStock").value),
-      category: parseInt(document.getElementById("productCategory").value),
-      barcode: document.getElementById("productBarcode").value,
-      image: document.getElementById("productImage").value || "📦",
-      imageType: document.getElementById("productImageType").value,
-    };
+  const productId = document.getElementById("editProductId").value;
+  const productData = {
+    code: document.getElementById("productCode").value,
+    name: document.getElementById("productName").value,
+    price: parseFloat(document.getElementById("productPrice").value),
+    cost: parseFloat(document.getElementById("productCost").value) || 0,
+    stock: parseInt(document.getElementById("productStock").value),
+    category: parseInt(document.getElementById("productCategory").value),
+    barcode: document.getElementById("productBarcode").value,
+    image: document.getElementById("productImage").value || "📦",
+    imageType: document.getElementById("productImageType").value,
+  };
 
+  Utils.showLoading("กำลังบันทึกสินค้า...");
+
+  try {
     if (productId) {
-      App.updateProduct(parseInt(productId), productData);
-      Utils.showToast("แก้ไขสินค้าสำเร็จ", "success");
+      // Update existing product
+      const success = await App.updateProduct(parseInt(productId), productData);
+      if (success) {
+        Utils.hideLoading();
+        Utils.showToast("แก้ไขสินค้าสำเร็จ", "success");
+      } else {
+        throw new Error("Failed to update product");
+      }
     } else {
-      App.addProduct(productData);
-      Utils.showToast("เพิ่มสินค้าสำเร็จ", "success");
-    }
-    
-    // Force sync immediately
-    try {
-      await App.syncWithFirebase();
-      console.log("Product synced to Firebase");
-    } catch (error) {
-      console.error("Sync error:", error);
+      // Add new product
+      const newProduct = await App.addProduct(productData);
+      if (newProduct) {
+        Utils.hideLoading();
+        Utils.showToast("เพิ่มสินค้าสำเร็จ", "success");
+      } else {
+        throw new Error("Failed to add product");
+      }
     }
 
+    // Reload products list
     this.loadProductsList();
     this.closeProductModal();
     POS.refresh();
-  },
+    
+  } catch (error) {
+    Utils.hideLoading();
+    console.error("Save product error:", error);
+    Utils.showToast("บันทึกสินค้าไม่สำเร็จ: " + error.message, "error");
+  }
+},
 
   editProduct(id) {
     const product = App.getProductById(id);
