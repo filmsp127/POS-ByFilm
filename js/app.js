@@ -531,24 +531,12 @@ productsSnapshot.forEach((doc) => {
     }
     this.unsubscribers = [];
 
-    // Filter sample products
-    const defaultProductNames = [
-      "อเมริกาโน่เย็น",
-      "อเมริกาโน่ร้อน",
-      "คาปูชิโน่",
-    ];
-
     // Listen to products changes
-    const productsUnsub = storeRef
-      .collection("products")
-      .onSnapshot((snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-          const data = change.doc.data();
-
-          // Filter out sample products
-          if (defaultProductNames.includes(data.name)) {
-            return; // Skip sample products
-          }
+const productsUnsub = storeRef
+  .collection("products")
+  .onSnapshot((snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      const data = change.doc.data();
 
           const product = { ...data, id: data.id || parseInt(change.doc.id) };
 
@@ -735,26 +723,34 @@ productsSnapshot.forEach((doc) => {
       const MAX_BATCH_SIZE = 400; // เผื่อไว้หน่อย
 
       // Sync products
-      for (const product of this.state.products) {
-        const productRef = storeRef
-          .collection("products")
-          .doc(product.id.toString());
-        batch.set(
-          productRef,
-          {
-            ...product,
-            lastSynced: firebase.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
-        operationCount++;
+for (const product of this.state.products) {
+  if (!product.id) {
+    console.error("Product missing ID:", product);
+    continue;
+  }
+  
+  const productRef = storeRef
+    .collection("products")
+    .doc(product.id.toString());
+  
+  batch.set(
+    productRef,
+    {
+      ...product,
+      id: product.id, // ตรวจสอบให้แน่ใจว่ามี id
+      lastSynced: firebase.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+  
+  operationCount++;
 
-        if (operationCount >= MAX_BATCH_SIZE) {
-          await batch.commit();
-          batch = FirebaseService.db.batch();
-          operationCount = 0;
-        }
-      }
+  if (operationCount >= MAX_BATCH_SIZE) {
+    await batch.commit();
+    batch = FirebaseService.db.batch();
+    operationCount = 0;
+  }
+}
 
       // Sync categories
       for (const category of this.state.categories) {
@@ -1052,17 +1048,24 @@ productsSnapshot.forEach((doc) => {
   },
 
   addProduct(product) {
-    product.id = Date.now();
-    this.state.products.push(product);
-    this.saveData();
+  // ใช้ timestamp เป็น ID เพื่อหลีกเลี่ยงการซ้ำกัน
+  product.id = Date.now();
+  
+  // ตรวจสอบว่า id ไม่ซ้ำ
+  while (this.state.products.find(p => p.id === product.id)) {
+    product.id = Date.now() + Math.floor(Math.random() * 1000);
+  }
+  
+  this.state.products.push(product);
+  this.saveData();
 
-    // Sync immediately
-    if (window.FirebaseService && FirebaseService.isAuthenticated()) {
-      this.syncProductToFirebase(product);
-    }
+  // Sync immediately
+  if (window.FirebaseService && FirebaseService.isAuthenticated()) {
+    this.syncProductToFirebase(product);
+  }
 
-    return product;
-  },
+  return product;
+},
 
   // Sync single product to Firebase
   async syncProductToFirebase(product) {
@@ -1476,4 +1479,32 @@ productsSnapshot.forEach((doc) => {
       Utils.showToast("Sync ผิดพลาด: " + error.message, "error");
     }
   },
+  // Debug function - ตรวจสอบสินค้าใน Firebase
+async debugCheckProducts() {
+  if (!FirebaseService.currentStore) {
+    console.error("No store selected");
+    return;
+  }
+  
+  const storeId = FirebaseService.currentStore.id;
+  console.log("Checking products in store:", storeId);
+  
+  try {
+    const snapshot = await FirebaseService.db
+      .collection("stores")
+      .doc(storeId)
+      .collection("products")
+      .get();
+    
+    console.log("Total products in Firebase:", snapshot.size);
+    
+    snapshot.forEach((doc) => {
+      console.log("Product:", doc.id, doc.data());
+    });
+    
+    console.log("Local products:", this.state.products);
+  } catch (error) {
+    console.error("Error checking products:", error);
+  }
+},
 };
