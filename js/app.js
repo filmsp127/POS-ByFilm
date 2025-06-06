@@ -466,25 +466,6 @@ productsSnapshot.forEach((doc) => {
   });
 });
 
-this.state.products = products;
-console.log("Products loaded:", products.length);
-      const defaultProductNames = [
-        "อเมริกาโน่เย็น",
-        "อเมริกาโน่ร้อน",
-        "คาปูชิโน่",
-      ];
-
-      productsSnapshot.forEach((doc) => {
-        const data = doc.data();
-        // Filter out sample products
-        if (!defaultProductNames.includes(data.name)) {
-          products.push({
-            ...data,
-            id: data.id || parseInt(doc.id),
-          });
-        }
-      });
-
       this.state.products = products;
       console.log("Loaded products:", products.length);
 
