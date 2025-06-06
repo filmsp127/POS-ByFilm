@@ -7,7 +7,7 @@ const SyncManager = {
     isSyncing: false
   },
 
- // Initialize sync manager
+  // Initialize sync manager
   init() {
     console.log("🔄 Initializing Sync Manager...");
     
@@ -16,10 +16,26 @@ const SyncManager = {
     window.addEventListener('offline', () => this.handleOffline());
     
     // Setup periodic sync check with longer interval
-    setInterval(() => this.checkSyncStatus(), 60000); // Every 60 seconds (เพิ่มจาก 30)
+    setInterval(() => this.checkSyncStatus(), 60000); // Every 60 seconds
     
     // Check initial status after delay
     setTimeout(() => this.checkSyncStatus(), 5000); // Wait 5 seconds before first check
+    
+    // Load pending sync from localStorage
+    this.loadPendingSync();
+  },
+
+  // Load pending sync from localStorage
+  loadPendingSync() {
+    try {
+      const saved = localStorage.getItem('pendingSync');
+      if (saved) {
+        this.syncStatus.pendingSync = JSON.parse(saved);
+        console.log(`📋 Loaded ${this.syncStatus.pendingSync.length} pending sync items`);
+      }
+    } catch (error) {
+      console.error('Error loading pending sync:', error);
+    }
   },
 
   // Handle when coming online
@@ -47,10 +63,17 @@ const SyncManager = {
     if (!window.FirebaseService || !FirebaseService.isAuthenticated()) return;
     
     try {
-      // Test Firebase connection
-      await FirebaseService.db.collection('_test').doc('ping').set({
+      // Test Firebase connection with timeout
+      const testPromise = FirebaseService.db.collection('_test').doc('ping').set({
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
+      
+      // Add timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 5000)
+      );
+      
+      await Promise.race([testPromise, timeoutPromise]);
       
       // If successful, sync any pending data
       if (this.syncStatus.pendingSync.length > 0) {
@@ -64,17 +87,26 @@ const SyncManager = {
 
   // Add data to pending sync
   addToPendingSync(type, data) {
-    this.syncStatus.pendingSync.push({
-      type,
-      data,
-      timestamp: Date.now()
-    });
+    // Check if item already exists
+    const exists = this.syncStatus.pendingSync.some(item => 
+      item.type === type && item.data.id === data.id
+    );
     
-    // Save to localStorage
-    localStorage.setItem('pendingSync', JSON.stringify(this.syncStatus.pendingSync));
+    if (!exists) {
+      this.syncStatus.pendingSync.push({
+        type,
+        data,
+        timestamp: Date.now()
+      });
+      
+      // Save to localStorage
+      localStorage.setItem('pendingSync', JSON.stringify(this.syncStatus.pendingSync));
+      
+      console.log(`➕ Added ${type} to pending sync:`, data.id || data.name);
+    }
     
     // Try to sync immediately if online
-    if (this.syncStatus.isOnline) {
+    if (this.syncStatus.isOnline && !this.syncStatus.isSyncing) {
       this.syncPendingData();
     }
   },
@@ -86,24 +118,41 @@ const SyncManager = {
     this.syncStatus.isSyncing = true;
     const pending = [...this.syncStatus.pendingSync];
     
+    console.log(`🔄 Syncing ${pending.length} pending items...`);
+    
+    let successCount = 0;
+    let failCount = 0;
+    
     try {
       for (const item of pending) {
-        await this.syncItem(item);
-        
-        // Remove from pending
-        const index = this.syncStatus.pendingSync.findIndex(p => p.timestamp === item.timestamp);
-        if (index !== -1) {
-          this.syncStatus.pendingSync.splice(index, 1);
+        try {
+          await this.syncItem(item);
+          
+          // Remove from pending
+          const index = this.syncStatus.pendingSync.findIndex(p => p.timestamp === item.timestamp);
+          if (index !== -1) {
+            this.syncStatus.pendingSync.splice(index, 1);
+          }
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to sync ${item.type}:`, error);
+          failCount++;
         }
       }
       
-      // Clear localStorage
-      localStorage.removeItem('pendingSync');
+      // Save updated pending list
+      localStorage.setItem('pendingSync', JSON.stringify(this.syncStatus.pendingSync));
       
       // Update last sync time
       this.syncStatus.lastSync = Date.now();
       
-      Utils.showToast("✅ ข้อมูลถูก sync เรียบร้อย", "success");
+      if (successCount > 0) {
+        Utils.showToast(`✅ Sync สำเร็จ ${successCount} รายการ`, "success");
+      }
+      
+      if (failCount > 0) {
+        Utils.showToast(`❌ Sync ไม่สำเร็จ ${failCount} รายการ`, "error");
+      }
     } catch (error) {
       console.error("Sync error:", error);
       Utils.showToast("❌ ไม่สามารถ sync ข้อมูลได้", "error");
@@ -114,10 +163,14 @@ const SyncManager = {
 
   // Sync individual item
   async syncItem(item) {
-    if (!FirebaseService.currentStore) return;
+    if (!FirebaseService.currentStore) {
+      throw new Error('No current store');
+    }
     
     const storeId = FirebaseService.currentStore.id;
     const storeRef = FirebaseService.db.collection('stores').doc(storeId);
+    
+    console.log(`🔸 Syncing ${item.type}:`, item.data.id || item.data.name);
     
     switch (item.type) {
       case 'sale':
@@ -147,6 +200,21 @@ const SyncManager = {
           lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         });
         break;
+        
+      case 'category':
+        await storeRef.collection('categories').doc(item.data.id.toString()).set({
+          ...item.data,
+          lastSynced: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        break;
+        
+      case 'productDelete':
+        await storeRef.collection('products').doc(item.data.id.toString()).delete();
+        break;
+        
+      case 'memberDelete':
+        await storeRef.collection('members').doc(item.data.id.toString()).delete();
+        break;
     }
   },
 
@@ -160,7 +228,10 @@ const SyncManager = {
     Utils.showLoading("กำลัง sync ข้อมูลทั้งหมด...");
     
     try {
-      // Sync all data
+      // First, reload data from Firebase
+      await App.loadFromFirebase();
+      
+      // Then sync local changes
       await App.syncWithFirebase();
       
       // Sync pending data
@@ -173,10 +244,28 @@ const SyncManager = {
       if (POS && POS.refresh) {
         POS.refresh();
       }
+      
+      // Refresh backoffice if open
+      if (BackOffice && BackOffice.currentPage) {
+        switch (BackOffice.currentPage) {
+          case 'products':
+            BackOffice.loadProductsList();
+            break;
+          case 'members':
+            BackOffice.loadMembersList();
+            break;
+          case 'sales':
+            BackOffice.loadSalesHistory();
+            break;
+          case 'dashboard':
+            BackOffice.updateDashboardStats();
+            break;
+        }
+      }
     } catch (error) {
       Utils.hideLoading();
       console.error("Force sync error:", error);
-      Utils.showToast("❌ ไม่สามารถ sync ข้อมูลได้", "error");
+      Utils.showToast("❌ ไม่สามารถ sync ข้อมูลได้: " + error.message, "error");
     }
   },
 
@@ -194,7 +283,21 @@ const SyncManager = {
       return `<span class="text-yellow-500"><i class="fas fa-exclamation-triangle"></i> รอ sync ${this.syncStatus.pendingSync.length} รายการ</span>`;
     }
     
+    if (this.syncStatus.lastSync) {
+      const minutesAgo = Math.floor((Date.now() - this.syncStatus.lastSync) / 60000);
+      if (minutesAgo < 1) {
+        return '<span class="text-green-500"><i class="fas fa-check-circle"></i> ซิงค์แล้ว</span>';
+      } else {
+        return `<span class="text-green-500"><i class="fas fa-check-circle"></i> ซิงค์เมื่อ ${minutesAgo} นาทีที่แล้ว</span>`;
+      }
+    }
+    
     return '<span class="text-green-500"><i class="fas fa-check-circle"></i> ออนไลน์</span>';
+  },
+
+  // Queue operation for sync
+  queueOperation(type, data) {
+    this.addToPendingSync(type, data);
   }
 };
 
