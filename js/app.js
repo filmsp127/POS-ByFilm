@@ -17,7 +17,7 @@ const App = {
       currency: "฿",
       memberDiscount: 5,
       pointRate: 100,
-      autoLockMinutes: 10, // Auto lock after 10 minutes
+      autoLockMinutes: 10,
       printer: { enabled: false, ip: "" },
       cashDrawer: { enabled: false, port: "" },
       scanner: { enabled: false },
@@ -34,6 +34,7 @@ const App = {
   autoSaveInterval: null,
   lastActivity: Date.now(),
   lockCheckInterval: null,
+  unsubscribers: [],
 
   // Initialize application
   init() {
@@ -63,12 +64,68 @@ const App = {
   // Initialize the main application
   async initializeApp() {
     try {
+      console.log("🚀 Starting app initialization...");
+
       // Get current store
       const store = Auth.getCurrentStore();
-      if (store) {
-        this.state.currentStoreId = store.id;
-        console.log(`🏪 Loading data for store: ${store.name}`);
+      const user = Auth.getCurrentUser();
+
+      console.log("Current user:", user);
+      console.log("Current store:", store);
+
+      if (!store && user && window.FirebaseService) {
+        console.log("No store found, checking user stores...");
+
+        try {
+          const stores = await FirebaseService.getUserStores(user.uid);
+          console.log("User stores:", stores);
+
+          if (stores.length === 0) {
+            Utils.showToast("ไม่พบข้อมูลร้าน กรุณาสร้างร้านใหม่", "error");
+            document.getElementById("loadingScreen").style.display = "none";
+            this.showCreateStoreModal();
+            return;
+          } else if (stores.length === 1) {
+            // มีร้านเดียว เลือกอัตโนมัติ
+            console.log("Auto-selecting single store:", stores[0]);
+            const selectResult = await FirebaseService.selectStore(
+              stores[0].storeId
+            );
+            if (selectResult.success) {
+              // เริ่มใหม่หลังจากเลือกร้านแล้ว
+              await this.initializeApp();
+              return;
+            } else {
+              throw new Error("Failed to select store: " + selectResult.error);
+            }
+          } else {
+            // มีหลายร้าน ให้เลือก
+            document.getElementById("loadingScreen").style.display = "none";
+            this.showStoreSelectionModal(stores);
+            return;
+          }
+        } catch (error) {
+          console.error("Error getting user stores:", error);
+          document.getElementById("loadingScreen").style.display = "none";
+          Utils.showToast("เกิดข้อผิดพลาดในการโหลดข้อมูลร้าน", "error");
+          return;
+        }
       }
+
+      if (!store) {
+        console.error("No store available");
+        document.getElementById("loadingScreen").style.display = "none";
+        Utils.showToast("ไม่พบข้อมูลร้าน", "error");
+        return;
+      }
+
+      this.state.currentStoreId = store.id;
+      console.log(`🏪 Loading data for store: ${store.name}`);
+
+      // Update settings with store info
+      this.state.settings.storeName = store.name || "Modern POS";
+      this.state.settings.storeAddress = store.address || "";
+      this.state.settings.storePhone = store.phone || "";
 
       // Load saved data for this store
       await this.loadData();
@@ -93,15 +150,142 @@ const App = {
 
       // Setup service worker for offline support
       this.setupServiceWorker();
-
-      // Initial sync with Firebase
-      if (window.FirebaseService && FirebaseService.isAuthenticated()) {
-        this.syncWithFirebase();
-      }
     } catch (error) {
       console.error("App initialization error:", error);
       document.getElementById("loadingScreen").style.display = "none";
-      Utils.showToast("เกิดข้อผิดพลาดในการโหลดข้อมูล", "error");
+      Utils.showToast(
+        "เกิดข้อผิดพลาดในการโหลดข้อมูล: " + error.message,
+        "error"
+      );
+    }
+  },
+
+  // Show store selection modal
+  showStoreSelectionModal(stores) {
+    const content = `
+      <div class="p-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">เลือกร้านค้า</h3>
+        <div class="space-y-3">
+          ${stores
+            .map(
+              (store) => `
+            <button onclick="App.selectStore('${store.storeId}')" 
+                    class="w-full p-4 bg-gray-50 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition text-left">
+              <div class="font-medium text-gray-800">${store.storeName}</div>
+              <div class="text-sm text-gray-500">เข้าร่วมเมื่อ ${Utils.formatDate(
+                store.joinedAt?.toDate() || new Date()
+              )}</div>
+            </button>
+          `
+            )
+            .join("")}
+        </div>
+        
+        <div class="mt-6 pt-4 border-t">
+          <button onclick="App.showCreateStoreModal()" 
+                  class="w-full btn-primary py-2 rounded-lg text-white">
+            <i class="fas fa-plus mr-2"></i>สร้างร้านใหม่
+          </button>
+        </div>
+      </div>
+    `;
+
+    Utils.createModal(content, { size: "w-full max-w-md" });
+  },
+
+  async selectStore(storeId) {
+    Utils.showLoading("กำลังเปลี่ยนร้าน...");
+
+    const result = await FirebaseService.selectStore(storeId);
+    if (result.success) {
+      Utils.hideLoading();
+      location.reload();
+    } else {
+      Utils.hideLoading();
+      Utils.showToast("เกิดข้อผิดพลาดในการเลือกร้าน", "error");
+    }
+  },
+
+  showCreateStoreModal() {
+    const content = `
+      <div class="p-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">สร้างร้านใหม่</h3>
+        
+        <form onsubmit="App.createNewStore(event)">
+          <div class="space-y-4">
+            <div>
+              <label class="text-gray-700 text-sm font-medium">ชื่อร้าน *</label>
+              <input type="text" id="newStoreName" required
+                     class="w-full mt-1 p-2 rounded-lg border border-gray-300 text-gray-800">
+            </div>
+            
+            <div>
+              <label class="text-gray-700 text-sm font-medium">ที่อยู่</label>
+              <textarea id="newStoreAddress" rows="3"
+                        class="w-full mt-1 p-2 rounded-lg border border-gray-300 text-gray-800"></textarea>
+            </div>
+            
+            <div>
+              <label class="text-gray-700 text-sm font-medium">เบอร์โทร</label>
+              <input type="tel" id="newStorePhone"
+                     class="w-full mt-1 p-2 rounded-lg border border-gray-300 text-gray-800">
+            </div>
+          </div>
+          
+          <div class="flex gap-3 mt-6">
+            <button type="button" onclick="Utils.closeModal(this.closest('.fixed'))"
+                    class="flex-1 bg-gray-200 hover:bg-gray-300 py-2 rounded-lg text-gray-800">
+              ยกเลิก
+            </button>
+            <button type="submit"
+                    class="flex-1 btn-primary py-2 rounded-lg text-white">
+              สร้างร้าน
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    Utils.createModal(content, { size: "w-full max-w-md" });
+  },
+
+  async createNewStore(event) {
+    event.preventDefault();
+
+    const user = Auth.getCurrentUser();
+    if (!user) {
+      Utils.showToast("กรุณาเข้าสู่ระบบก่อน", "error");
+      return;
+    }
+
+    const storeData = {
+      name: document.getElementById("newStoreName").value.trim(),
+      address: document.getElementById("newStoreAddress").value.trim(),
+      phone: document.getElementById("newStorePhone").value.trim(),
+      ownerId: user.uid,
+      ownerEmail: user.email,
+      ownerName: user.displayName || user.email,
+    };
+
+    Utils.showLoading("กำลังสร้างร้าน...");
+
+    const result = await FirebaseService.createStore(storeData);
+
+    if (result.success) {
+      Utils.hideLoading();
+      Utils.showToast("สร้างร้านสำเร็จ!", "success");
+      Utils.closeModal(event.target.closest(".fixed"));
+
+      // Select the new store
+      const selectResult = await FirebaseService.selectStore(result.storeId);
+      if (selectResult.success) {
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
+      }
+    } else {
+      Utils.hideLoading();
+      Utils.showToast(`สร้างร้านไม่สำเร็จ: ${result.error}`, "error");
     }
   },
 
@@ -121,6 +305,10 @@ const App = {
     // Save on page unload
     window.addEventListener("beforeunload", () => {
       this.saveData();
+      // Cleanup listeners
+      if (this.unsubscribers) {
+        this.unsubscribers.forEach((unsub) => unsub());
+      }
     });
 
     // Save on visibility change (mobile)
@@ -184,94 +372,308 @@ const App = {
       const storeId = this.state.currentStoreId;
       if (!storeId) {
         console.error("No store ID found");
-        this.loadDefaultData();
         return;
       }
 
-      // Try to load from localStorage first
-      const storageKey = `posData_${storeId}`;
-      const savedData = localStorage.getItem(storageKey);
-
-      if (savedData) {
-        const data = JSON.parse(savedData);
-        this.state = { ...this.state, ...data, currentStoreId: storeId };
-        console.log("✅ Data loaded from storage for store:", storeId);
-      } else if (window.FirebaseService && FirebaseService.isAuthenticated()) {
-        // Try to load from Firebase
+      // Always try to load from Firebase first if authenticated
+      if (window.FirebaseService && FirebaseService.isAuthenticated()) {
+        console.log("Loading from Firebase...");
         await this.loadFromFirebase();
+
+        // Setup real-time sync
+        this.setupRealtimeSync();
       } else {
-        // Load default data for new store
-        this.loadDefaultData();
-        console.log("📦 Default data loaded for new store");
+        // Try to load from localStorage
+        const storageKey = `posData_${storeId}`;
+        const savedData = localStorage.getItem(storageKey);
+
+        if (savedData) {
+          const data = JSON.parse(savedData);
+          this.state = { ...this.state, ...data, currentStoreId: storeId };
+          console.log("✅ Data loaded from storage for store:", storeId);
+        } else {
+          // Load default data without products
+          this.loadDefaultDataWithoutProducts();
+          console.log("📦 Default data loaded (no products)");
+        }
       }
     } catch (error) {
       console.error("❌ Error loading data:", error);
-      this.loadDefaultData();
+      this.loadDefaultDataWithoutProducts();
     }
   },
 
   // Load data from Firebase
   async loadFromFirebase() {
-    try {
-      if (!FirebaseService.currentStore) return;
+    if (!FirebaseService.currentStore) {
+      console.error("No current store for loading data");
+      return;
+    }
 
+    try {
       const storeId = FirebaseService.currentStore.id;
       const storeRef = FirebaseService.db.collection("stores").doc(storeId);
 
-      // Load products
-      const productsSnap = await storeRef.collection("products").get();
-      const products = [];
-      productsSnap.forEach((doc) => {
-        products.push({ ...doc.data(), id: doc.id });
-      });
-      if (products.length > 0) {
-        this.state.products = products;
+      // Load store info
+      const storeDoc = await storeRef.get();
+      if (storeDoc.exists) {
+        const storeData = storeDoc.data();
+        if (storeData.settings) {
+          this.state.settings = {
+            ...this.state.settings,
+            ...storeData.settings,
+          };
+        }
+        // Update store name
+        this.state.settings.storeName = storeData.name || "Modern POS";
+        this.state.settings.storeAddress = storeData.address || "";
+        this.state.settings.storePhone = storeData.phone || "";
       }
 
       // Load categories
-      const categoriesSnap = await storeRef.collection("categories").get();
+      const categoriesSnapshot = await storeRef.collection("categories").get();
       const categories = [];
-      categoriesSnap.forEach((doc) => {
+      categoriesSnapshot.forEach((doc) => {
         categories.push({ ...doc.data(), id: parseInt(doc.id) });
       });
       if (categories.length > 0) {
         this.state.categories = categories;
+      } else {
+        // If no categories, create defaults
+        this.loadDefaultCategories();
       }
+
+      // Load products - filter out sample products
+      const productsSnapshot = await storeRef.collection("products").get();
+      const products = [];
+      const defaultProductNames = [
+        "อเมริกาโน่เย็น",
+        "อเมริกาโน่ร้อน",
+        "คาปูชิโน่",
+      ];
+
+      productsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Filter out sample products
+        if (!defaultProductNames.includes(data.name)) {
+          products.push({
+            ...data,
+            id: data.id || parseInt(doc.id),
+          });
+        }
+      });
+
+      this.state.products = products;
+      console.log("Loaded products:", products.length);
 
       // Load members
-      const membersSnap = await storeRef.collection("members").get();
+      const membersSnapshot = await storeRef.collection("members").get();
       const members = [];
-      membersSnap.forEach((doc) => {
-        members.push({ ...doc.data(), id: doc.id });
+      membersSnapshot.forEach((doc) => {
+        const data = doc.data();
+        members.push({
+          ...data,
+          id: data.id || parseInt(doc.id),
+        });
       });
-      if (members.length > 0) {
-        this.state.members = members;
-      }
+      this.state.members = members;
 
-      // Load recent sales (last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const salesSnap = await storeRef
+      // Load sales (last 100)
+      const salesSnapshot = await storeRef
         .collection("sales")
-        .where("timestamp", ">=", thirtyDaysAgo.getTime())
         .orderBy("timestamp", "desc")
-        .limit(500)
+        .limit(100)
         .get();
-
       const sales = [];
-      salesSnap.forEach((doc) => {
-        sales.push({ ...doc.data(), id: parseInt(doc.id) });
+      salesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        sales.push({
+          ...data,
+          id: parseInt(doc.id),
+        });
       });
-      if (sales.length > 0) {
-        this.state.sales = sales;
-      }
+      this.state.sales = sales.reverse(); // Sort from oldest to newest
 
       console.log("✅ Data loaded from Firebase");
-      this.saveData(); // Save to local storage
+
+      // Save to localStorage for offline use
+      this.saveData();
     } catch (error) {
-      console.error("Error loading from Firebase:", error);
+      console.error("❌ Error loading from Firebase:", error);
+
+      // Fall back to localStorage
+      const storageKey = `posData_${this.state.currentStoreId}`;
+      const savedData = localStorage.getItem(storageKey);
+      if (savedData) {
+        const data = JSON.parse(savedData);
+        this.state = {
+          ...this.state,
+          ...data,
+          currentStoreId: this.state.currentStoreId,
+        };
+      } else {
+        this.loadDefaultDataWithoutProducts();
+      }
     }
+  },
+
+  // Setup real-time sync with Firebase
+  setupRealtimeSync() {
+    if (!FirebaseService.currentStore) return;
+
+    const storeId = FirebaseService.currentStore.id;
+    const storeRef = FirebaseService.db.collection("stores").doc(storeId);
+
+    // Clear existing listeners
+    if (this.unsubscribers) {
+      this.unsubscribers.forEach((unsub) => unsub());
+    }
+    this.unsubscribers = [];
+
+    // Filter sample products
+    const defaultProductNames = [
+      "อเมริกาโน่เย็น",
+      "อเมริกาโน่ร้อน",
+      "คาปูชิโน่",
+    ];
+
+    // Listen to products changes
+    const productsUnsub = storeRef
+      .collection("products")
+      .onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          const data = change.doc.data();
+
+          // Filter out sample products
+          if (defaultProductNames.includes(data.name)) {
+            return; // Skip sample products
+          }
+
+          const product = { ...data, id: data.id || parseInt(change.doc.id) };
+
+          if (change.type === "added") {
+            const exists = this.state.products.find((p) => p.id === product.id);
+            if (!exists) {
+              this.state.products.push(product);
+            }
+          } else if (change.type === "modified") {
+            const index = this.state.products.findIndex(
+              (p) => p.id === product.id
+            );
+            if (index >= 0) {
+              this.state.products[index] = product;
+            }
+          } else if (change.type === "removed") {
+            this.state.products = this.state.products.filter(
+              (p) => p.id !== product.id
+            );
+          }
+        });
+
+        // Update UI
+        if (POS && POS.refresh) {
+          POS.refresh();
+        }
+        if (BackOffice.currentPage === "products") {
+          BackOffice.loadProductsList();
+        }
+      });
+    this.unsubscribers.push(productsUnsub);
+
+    // Listen to categories changes
+    const categoriesUnsub = storeRef
+      .collection("categories")
+      .onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          const data = change.doc.data();
+          const category = { ...data, id: parseInt(change.doc.id) };
+
+          if (change.type === "added") {
+            const exists = this.state.categories.find(
+              (c) => c.id === category.id
+            );
+            if (!exists) {
+              this.state.categories.push(category);
+            }
+          } else if (change.type === "modified") {
+            const index = this.state.categories.findIndex(
+              (c) => c.id === category.id
+            );
+            if (index >= 0) {
+              this.state.categories[index] = category;
+            }
+          } else if (change.type === "removed") {
+            this.state.categories = this.state.categories.filter(
+              (c) => c.id !== category.id
+            );
+          }
+        });
+
+        // Update UI
+        if (POS && POS.refresh) {
+          POS.refresh();
+        }
+      });
+    this.unsubscribers.push(categoriesUnsub);
+
+    // Listen to members changes
+    const membersUnsub = storeRef
+      .collection("members")
+      .onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          const data = change.doc.data();
+          const member = { ...data, id: data.id || parseInt(change.doc.id) };
+
+          if (change.type === "added") {
+            const exists = this.state.members.find((m) => m.id === member.id);
+            if (!exists) {
+              this.state.members.push(member);
+            }
+          } else if (change.type === "modified") {
+            const index = this.state.members.findIndex(
+              (m) => m.id === member.id
+            );
+            if (index >= 0) {
+              this.state.members[index] = member;
+            }
+          } else if (change.type === "removed") {
+            this.state.members = this.state.members.filter(
+              (m) => m.id !== member.id
+            );
+          }
+        });
+
+        if (BackOffice.currentPage === "members") {
+          BackOffice.loadMembersList();
+        }
+      });
+    this.unsubscribers.push(membersUnsub);
+
+    // Listen to store info changes
+    const storeUnsub = storeRef.onSnapshot((doc) => {
+      if (doc.exists) {
+        const storeData = doc.data();
+
+        // Update store settings
+        if (storeData.settings) {
+          this.state.settings = {
+            ...this.state.settings,
+            ...storeData.settings,
+          };
+        }
+
+        // Update store info
+        this.state.settings.storeName = storeData.name || "Modern POS";
+        this.state.settings.storeAddress = storeData.address || "";
+        this.state.settings.storePhone = storeData.phone || "";
+
+        // Save to localStorage
+        this.saveData();
+      }
+    });
+    this.unsubscribers.push(storeUnsub);
+
+    console.log("✅ Real-time sync setup completed");
   },
 
   // Sync with Firebase
@@ -281,6 +683,19 @@ const App = {
 
       const storeId = FirebaseService.currentStore.id;
       const storeRef = FirebaseService.db.collection("stores").doc(storeId);
+
+      // Sync store settings
+      await storeRef.set(
+        {
+          name:
+            this.state.settings.storeName || FirebaseService.currentStore.name,
+          address: this.state.settings.storeAddress || "",
+          phone: this.state.settings.storePhone || "",
+          settings: this.state.settings,
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
 
       // Sync products
       const batch = FirebaseService.db.batch();
@@ -371,7 +786,6 @@ const App = {
     }
   },
 
-  // Sales with member info
   addSale(sale) {
     try {
       sale.id = Date.now();
@@ -392,9 +806,11 @@ const App = {
         if (member) {
           sale.memberName = member.name;
           sale.memberPhone = member.phone;
+          sale.customerName = member.name;
         }
       } else {
         sale.memberName = "ลูกค้าทั่วไป";
+        sale.customerName = sale.customerName || "ลูกค้าทั่วไป";
       }
 
       // Validate sale data
@@ -416,13 +832,15 @@ const App = {
       // Save to localStorage immediately
       this.saveData();
 
-      // Log activity
-      this.logActivity("sale_completed", {
-        saleId: sale.id,
-        total: sale.total,
-        itemCount: sale.items.length,
-        memberName: sale.memberName,
-      });
+      // Sync to Firebase immediately
+      if (
+        window.FirebaseService &&
+        FirebaseService.isAuthenticated() &&
+        FirebaseService.currentStore
+      ) {
+        this.syncSaleToFirebase(sale);
+        this.syncProductsToFirebase(); // Sync updated stock
+      }
 
       console.log("✅ Sale saved successfully:", sale.id);
       return sale;
@@ -436,6 +854,56 @@ const App = {
       }
 
       throw error;
+    }
+  },
+
+  // Sync sale to Firebase
+  async syncSaleToFirebase(sale) {
+    try {
+      if (!FirebaseService.currentStore) return;
+
+      const storeId = FirebaseService.currentStore.id;
+      await FirebaseService.db
+        .collection("stores")
+        .doc(storeId)
+        .collection("sales")
+        .doc(sale.id.toString())
+        .set({
+          ...sale,
+          syncedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+
+      console.log("Sale synced to Firebase:", sale.id);
+    } catch (error) {
+      console.error("Error syncing sale:", error);
+    }
+  },
+
+  // Sync products to Firebase (for stock updates)
+  async syncProductsToFirebase() {
+    try {
+      if (!FirebaseService.currentStore) return;
+
+      const storeId = FirebaseService.currentStore.id;
+      const batch = FirebaseService.db.batch();
+
+      this.state.products.forEach((product) => {
+        const productRef = FirebaseService.db
+          .collection("stores")
+          .doc(storeId)
+          .collection("products")
+          .doc(product.id.toString());
+
+        batch.update(productRef, {
+          stock: product.stock,
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+
+      await batch.commit();
+      console.log("Products stock synced to Firebase");
+    } catch (error) {
+      console.error("Error syncing products:", error);
     }
   },
 
@@ -489,7 +957,35 @@ const App = {
     product.id = Date.now();
     this.state.products.push(product);
     this.saveData();
+
+    // Sync immediately
+    if (window.FirebaseService && FirebaseService.isAuthenticated()) {
+      this.syncProductToFirebase(product);
+    }
+
     return product;
+  },
+
+  // Sync single product to Firebase
+  async syncProductToFirebase(product) {
+    try {
+      if (!FirebaseService.currentStore) return;
+
+      const storeId = FirebaseService.currentStore.id;
+      await FirebaseService.db
+        .collection("stores")
+        .doc(storeId)
+        .collection("products")
+        .doc(product.id.toString())
+        .set({
+          ...product,
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+
+      console.log("Product synced:", product.name);
+    } catch (error) {
+      console.error("Error syncing product:", error);
+    }
   },
 
   updateProduct(id, updates) {
@@ -500,6 +996,12 @@ const App = {
         ...updates,
       };
       this.saveData();
+
+      // Sync to Firebase
+      if (window.FirebaseService && FirebaseService.isAuthenticated()) {
+        this.syncProductToFirebase(this.state.products[index]);
+      }
+
       return true;
     }
     return false;
@@ -508,67 +1010,27 @@ const App = {
   deleteProduct(id) {
     this.state.products = this.state.products.filter((p) => p.id !== id);
     this.saveData();
+
+    // Delete from Firebase
+    if (
+      window.FirebaseService &&
+      FirebaseService.isAuthenticated() &&
+      FirebaseService.currentStore
+    ) {
+      const storeId = FirebaseService.currentStore.id;
+      FirebaseService.db
+        .collection("stores")
+        .doc(storeId)
+        .collection("products")
+        .doc(id.toString())
+        .delete()
+        .catch(console.error);
+    }
   },
 
   // Categories
   getCategories() {
     return this.state.categories;
-  },
-
-  // Sales
-  addSale(sale) {
-    try {
-      sale.id = Date.now();
-      sale.timestamp = Date.now();
-      sale.date = new Date().toISOString();
-      sale.storeId = this.state.currentStoreId; // เพิ่ม Store ID
-
-      // Add user info
-      const user = Auth.getCurrentUser();
-      if (user) {
-        sale.cashier = user.username || user.email || "พนักงาน";
-        if (user.uid) sale.cashierId = user.uid;
-      }
-
-      // Validate sale data
-      if (!sale.items || sale.items.length === 0) {
-        throw new Error("ไม่มีสินค้าในรายการขาย");
-      }
-
-      // Save to state first
-      this.state.sales.push(sale);
-
-      // Update stock
-      sale.items.forEach((item) => {
-        const product = this.getProductById(item.id);
-        if (product) {
-          product.stock -= item.quantity;
-        }
-      });
-
-      // Save to localStorage
-      this.saveData();
-
-      // Log activity
-      this.logActivity("sale_completed", {
-        saleId: sale.id,
-        total: sale.total,
-        itemCount: sale.items.length,
-      });
-
-      console.log("✅ Sale saved successfully:", sale.id);
-      return sale;
-    } catch (error) {
-      console.error("❌ Error adding sale:", error);
-
-      // Rollback changes
-      const index = this.state.sales.findIndex((s) => s.id === sale.id);
-      if (index !== -1) {
-        this.state.sales.splice(index, 1);
-      }
-
-      throw error; // Re-throw for handling in payment module
-    }
   },
 
   // Get sale by ID
@@ -591,7 +1053,10 @@ const App = {
 
   getSalesByDateRange(startDate, endDate) {
     const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
     return this.state.sales.filter((s) => {
       const saleDate = new Date(s.date);
       return saleDate >= start && saleDate <= end;
@@ -659,7 +1124,7 @@ const App = {
           localStorage.removeItem(storageKey);
 
           // Reset to defaults but keep auth
-          this.loadDefaultData();
+          this.loadDefaultDataWithoutProducts();
           if (authSettings) {
             this.state.settings.auth = authSettings;
             this.saveData();
@@ -672,9 +1137,78 @@ const App = {
     );
   },
 
+  loadDefaultCategories() {
+    console.log("Loading default categories...");
+
+    this.state.categories = [
+      {
+        id: 1,
+        name: "ทั้งหมด",
+        icon: "fa-border-all",
+        color: "purple",
+        protected: true,
+      },
+      { id: 2, name: "เครื่องดื่ม", icon: "fa-mug-hot", color: "blue" },
+      { id: 3, name: "อาหาร", icon: "fa-utensils", color: "green" },
+      { id: 4, name: "ของหวาน", icon: "fa-ice-cream", color: "pink" },
+    ];
+
+    // Sync to Firebase
+    if (
+      window.FirebaseService &&
+      FirebaseService.isAuthenticated() &&
+      FirebaseService.currentStore
+    ) {
+      const storeId = FirebaseService.currentStore.id;
+      const batch = FirebaseService.db.batch();
+
+      this.state.categories.forEach((category) => {
+        const categoryRef = FirebaseService.db
+          .collection("stores")
+          .doc(storeId)
+          .collection("categories")
+          .doc(category.id.toString());
+        batch.set(categoryRef, {
+          ...category,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+
+      batch.commit().catch(console.error);
+    }
+  },
+
+  loadDefaultDataWithoutProducts() {
+    console.log("Loading default data without sample products...");
+
+    // Default categories only
+    this.loadDefaultCategories();
+
+    // Empty arrays - no sample products
+    this.state.products = [];
+    this.state.cart = [];
+    this.state.sales = [];
+    this.state.members = [];
+    this.state.currentCategory = 1;
+  },
+
   // Logout function
   logout() {
     Utils.confirm("ต้องการออกจากระบบ?", () => {
+      // Cleanup real-time listeners
+      if (this.unsubscribers) {
+        this.unsubscribers.forEach((unsub) => unsub());
+        this.unsubscribers = [];
+      }
+
+      // Clear intervals
+      if (this.autoSaveInterval) {
+        clearInterval(this.autoSaveInterval);
+      }
+      if (this.lockCheckInterval) {
+        clearInterval(this.lockCheckInterval);
+      }
+
       Auth.logout();
       location.reload();
     });
@@ -693,12 +1227,14 @@ const App = {
             <i class="fas fa-user text-white"></i>
           </div>
           <div>
-            <div class="font-medium text-gray-800">${user.username}</div>
-            <div class="text-sm text-gray-500">${
-              store ? store.name : "ร้านค้า"
+            <div class="font-medium text-gray-800">${
+              user.displayName || user.email || "ผู้ใช้"
+            }</div>
+            <div class="text-sm text-gray-600">${
+              store ? store.name : "กำลังโหลดข้อมูลร้าน..."
             }</div>
             <div class="text-xs text-gray-400">
-              เข้าสู่ระบบ ${Utils.formatDate(user.loginTime, "time")}
+              ${user.email}
             </div>
           </div>
         </div>
@@ -708,10 +1244,16 @@ const App = {
                   class="w-full text-left p-3 hover:bg-gray-100 rounded-lg transition">
             <i class="fas fa-key mr-3 text-gray-600"></i>เปลี่ยนรหัส PIN
           </button>
+          ${
+            store
+              ? `
           <button onclick="App.switchStore(); Utils.closeModal(this.closest('.fixed'))" 
                   class="w-full text-left p-3 hover:bg-gray-100 rounded-lg transition">
             <i class="fas fa-store mr-3 text-gray-600"></i>เปลี่ยนร้าน
           </button>
+          `
+              : ""
+          }
           <button onclick="App.logout(); Utils.closeModal(this.closest('.fixed'))" 
                   class="w-full text-left p-3 hover:bg-red-50 text-red-600 rounded-lg transition">
             <i class="fas fa-sign-out-alt mr-3"></i>ออกจากระบบ
@@ -731,102 +1273,109 @@ const App = {
     });
   },
 
-  // Check and handle session expiry
-  checkSession() {
-    if (!Auth.isAuthenticated()) {
-      Utils.showToast("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่", "warning");
-      setTimeout(() => {
-        location.reload();
-      }, 2000);
-      return false;
-    }
-    return true;
-  },
-
-  // Add activity logging
-  logActivity(action, details = {}) {
-    const user = Auth.getCurrentUser();
-    const store = Auth.getCurrentStore();
-    if (!user) return;
-
-    const logEntry = {
-      timestamp: Date.now(),
-      date: new Date().toISOString(),
-      user: user.username,
-      userId: user.uid,
-      storeId: store ? store.id : null,
-      storeName: store ? store.name : null,
-      action: action,
-      details: details,
-    };
-
-    // Store in activity log (keep last 1000 entries)
-    if (!this.state.activityLog) {
-      this.state.activityLog = [];
+  // Remove default products from Firebase
+  async forceRemoveDefaultProducts() {
+    if (!FirebaseService.currentStore) {
+      Utils.showToast("ไม่พบข้อมูลร้าน", "error");
+      return;
     }
 
-    this.state.activityLog.push(logEntry);
+    Utils.showLoading("กำลังลบสินค้าตัวอย่าง...");
 
-    // Keep only last 1000 entries
-    if (this.state.activityLog.length > 1000) {
-      this.state.activityLog = this.state.activityLog.slice(-1000);
+    try {
+      const storeId = FirebaseService.currentStore.id;
+      const storeRef = FirebaseService.db.collection("stores").doc(storeId);
+
+      // Sample product names
+      const defaultProducts = ["อเมริกาโน่เย็น", "อเมริกาโน่ร้อน", "คาปูชิโน่"];
+
+      // Get all products
+      const snapshot = await storeRef.collection("products").get();
+      const batch = FirebaseService.db.batch();
+      let deleteCount = 0;
+
+      snapshot.forEach((doc) => {
+        const product = doc.data();
+        if (defaultProducts.includes(product.name)) {
+          batch.delete(doc.ref);
+          deleteCount++;
+          console.log("Deleting:", product.name);
+        }
+      });
+
+      if (deleteCount > 0) {
+        await batch.commit();
+
+        // Remove from local state
+        this.state.products = this.state.products.filter(
+          (p) => !defaultProducts.includes(p.name)
+        );
+
+        // Save and sync
+        this.saveData();
+
+        Utils.hideLoading();
+        Utils.showToast(
+          `ลบสินค้าตัวอย่าง ${deleteCount} รายการสำเร็จ`,
+          "success"
+        );
+
+        // Reload page
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
+      } else {
+        Utils.hideLoading();
+        Utils.showToast("ไม่พบสินค้าตัวอย่าง", "info");
+      }
+    } catch (error) {
+      Utils.hideLoading();
+      console.error("Error:", error);
+      Utils.showToast("เกิดข้อผิดพลาด: " + error.message, "error");
+    }
+  },
+
+  // Check sync status
+  async checkSyncStatus() {
+    console.log("=== Sync Status Check ===");
+    console.log("Authenticated:", FirebaseService.isAuthenticated());
+    console.log("Current Store:", FirebaseService.currentStore);
+    console.log("Local Products:", this.state.products.length);
+    console.log("Store Name:", this.state.settings.storeName);
+
+    if (FirebaseService.currentStore) {
+      const storeId = FirebaseService.currentStore.id;
+      const snapshot = await FirebaseService.db
+        .collection("stores")
+        .doc(storeId)
+        .collection("products")
+        .get();
+
+      console.log("Firebase Products:", snapshot.size);
+
+      snapshot.forEach((doc) => {
+        console.log("- ", doc.data().name);
+      });
+    }
+  },
+
+  // Force sync products
+  async forceSyncProducts() {
+    if (!FirebaseService.currentStore) {
+      Utils.showToast("ไม่พบข้อมูลร้าน", "error");
+      return;
     }
 
-    this.saveData();
-  },
+    Utils.showLoading("กำลัง sync ข้อมูล...");
 
-  // Get activity log
-  getActivityLog(limit = 100) {
-    if (!this.state.activityLog) return [];
-
-    return this.state.activityLog.slice(-limit).reverse(); // Most recent first
-  },
-
-  // Data validation
-  validateSaleData() {
-    const sales = this.getSales();
-    const products = this.getProducts();
-
-    console.log("=== Data Validation ===");
-    console.log("Total sales:", sales.length);
-    console.log("Total products:", products.length);
-    console.log("Last sale:", sales[sales.length - 1]);
-    console.log("Current store:", this.state.currentStoreId);
-
-    // Check localStorage size
-    const dataSize = new Blob([JSON.stringify(this.state)]).size;
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    console.log("Data size:", (dataSize / 1024 / 1024).toFixed(2), "MB");
-
-    if (dataSize > maxSize * 0.8) {
-      console.warn("⚠️ Storage is getting full!");
-      this.cleanOldSales();
-    }
-
-    return {
-      salesCount: sales.length,
-      productsCount: products.length,
-      dataSize: dataSize,
-      isFull: dataSize > maxSize * 0.8,
-    };
-  },
-
-  // Clean old sales
-  cleanOldSales() {
-    const oneMonthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const oldSalesCount = this.state.sales.length;
-
-    // Keep only sales from last 30 days
-    this.state.sales = this.state.sales.filter((sale) => {
-      const saleTime = new Date(sale.date).getTime();
-      return saleTime > oneMonthAgo;
-    });
-
-    const removed = oldSalesCount - this.state.sales.length;
-    if (removed > 0) {
-      this.saveData();
-      console.log(`🗑️ Cleaned ${removed} old sales`);
-      Utils.showToast(`ลบข้อมูลเก่า ${removed} รายการ`, "info");
+    try {
+      await this.syncWithFirebase();
+      Utils.hideLoading();
+      Utils.showToast("Sync ข้อมูลสำเร็จ", "success");
+    } catch (error) {
+      Utils.hideLoading();
+      console.error("Sync error:", error);
+      Utils.showToast("Sync ผิดพลาด: " + error.message, "error");
     }
   },
 };
