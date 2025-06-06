@@ -136,6 +136,14 @@ const App = {
       Payment.init();
       BackOffice.init();
 
+      // Update sync status display
+setInterval(() => {
+  const statusEl = document.getElementById('syncStatus');
+  if (statusEl && window.SyncManager) {
+    statusEl.innerHTML = SyncManager.getSyncStatusDisplay();
+  }
+}, 1000);
+
       // Setup auto-save
       this.setupAutoSave();
 
