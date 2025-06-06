@@ -7,7 +7,7 @@ const SyncManager = {
     isSyncing: false
   },
 
-  // Initialize sync manager
+ // Initialize sync manager
   init() {
     console.log("🔄 Initializing Sync Manager...");
     
@@ -15,11 +15,11 @@ const SyncManager = {
     window.addEventListener('online', () => this.handleOnline());
     window.addEventListener('offline', () => this.handleOffline());
     
-    // Setup periodic sync check
-    setInterval(() => this.checkSyncStatus(), 30000); // Every 30 seconds
+    // Setup periodic sync check with longer interval
+    setInterval(() => this.checkSyncStatus(), 60000); // Every 60 seconds (เพิ่มจาก 30)
     
-    // Check initial status
-    this.checkSyncStatus();
+    // Check initial status after delay
+    setTimeout(() => this.checkSyncStatus(), 5000); // Wait 5 seconds before first check
   },
 
   // Handle when coming online
