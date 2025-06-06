@@ -517,7 +517,7 @@ const App = {
     }
   },
 
-  // Setup real-time sync with Firebase
+  // Setup real-time sync with Firebase - เพิ่ม sync sales ด้วย
   setupRealtimeSync() {
     if (!FirebaseService.currentStore) return;
 
@@ -649,6 +649,37 @@ const App = {
       });
     this.unsubscribers.push(membersUnsub);
 
+    // Listen to sales changes (last 100)
+    const salesUnsub = storeRef
+      .collection("sales")
+      .orderBy("timestamp", "desc")
+      .limit(100)
+      .onSnapshot((snapshot) => {
+        // Clear and reload all sales from snapshot
+        const newSales = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          newSales.push({
+            ...data,
+            id: parseInt(doc.id),
+          });
+        });
+        
+        // Sort from oldest to newest
+        this.state.sales = newSales.reverse();
+        
+        // Update UI if on sales page
+        if (BackOffice.currentPage === "sales") {
+          BackOffice.loadSalesHistory();
+        }
+        
+        // Update dashboard stats
+        if (BackOffice.currentPage === "dashboard") {
+          BackOffice.updateDashboardStats();
+        }
+      });
+    this.unsubscribers.push(salesUnsub);
+
     // Listen to store info changes
     const storeUnsub = storeRef.onSnapshot((doc) => {
       if (doc.exists) {
@@ -673,10 +704,10 @@ const App = {
     });
     this.unsubscribers.push(storeUnsub);
 
-    console.log("✅ Real-time sync setup completed");
+    console.log("✅ Real-time sync setup completed with sales sync");
   },
 
-  // Sync with Firebase
+    // Sync with Firebase - ปรับปรุงให้ sync ทุกอย่างรวมทั้ง sales
   async syncWithFirebase() {
     try {
       if (!FirebaseService.currentStore) return;
@@ -697,10 +728,13 @@ const App = {
         { merge: true }
       );
 
-      // Sync products
-      const batch = FirebaseService.db.batch();
+      // ใช้ batches แยกเพื่อหลีกเลี่ยง limit 500 operations
+      let batch = FirebaseService.db.batch();
+      let operationCount = 0;
+      const MAX_BATCH_SIZE = 400; // เผื่อไว้หน่อย
 
-      this.state.products.forEach((product) => {
+      // Sync products
+      for (const product of this.state.products) {
         const productRef = storeRef
           .collection("products")
           .doc(product.id.toString());
@@ -712,10 +746,17 @@ const App = {
           },
           { merge: true }
         );
-      });
+        operationCount++;
+
+        if (operationCount >= MAX_BATCH_SIZE) {
+          await batch.commit();
+          batch = FirebaseService.db.batch();
+          operationCount = 0;
+        }
+      }
 
       // Sync categories
-      this.state.categories.forEach((category) => {
+      for (const category of this.state.categories) {
         const categoryRef = storeRef
           .collection("categories")
           .doc(category.id.toString());
@@ -727,10 +768,17 @@ const App = {
           },
           { merge: true }
         );
-      });
+        operationCount++;
+
+        if (operationCount >= MAX_BATCH_SIZE) {
+          await batch.commit();
+          batch = FirebaseService.db.batch();
+          operationCount = 0;
+        }
+      }
 
       // Sync members
-      this.state.members.forEach((member) => {
+      for (const member of this.state.members) {
         const memberRef = storeRef
           .collection("members")
           .doc(member.id.toString());
@@ -742,16 +790,52 @@ const App = {
           },
           { merge: true }
         );
-      });
+        operationCount++;
 
-      await batch.commit();
-      console.log("✅ Data synced to Firebase");
+        if (operationCount >= MAX_BATCH_SIZE) {
+          await batch.commit();
+          batch = FirebaseService.db.batch();
+          operationCount = 0;
+        }
+      }
+
+      // Sync recent sales (last 50)
+      const recentSales = this.state.sales.slice(-50);
+      for (const sale of recentSales) {
+        const saleRef = storeRef
+          .collection("sales")
+          .doc(sale.id.toString());
+        batch.set(
+          saleRef,
+          {
+            ...sale,
+            lastSynced: firebase.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        operationCount++;
+
+        if (operationCount >= MAX_BATCH_SIZE) {
+          await batch.commit();
+          batch = FirebaseService.db.batch();
+          operationCount = 0;
+        }
+      }
+
+      // Commit remaining operations
+      if (operationCount > 0) {
+        await batch.commit();
+      }
+
+      console.log("✅ All data synced to Firebase");
+      return { success: true };
     } catch (error) {
       console.error("Error syncing to Firebase:", error);
+      throw error;
     }
   },
 
-  saveData() {
+   async saveData() {
     try {
       const storeId = this.state.currentStoreId;
       if (!storeId) {
@@ -759,13 +843,20 @@ const App = {
         return;
       }
 
+      // Save to localStorage first for offline support
       const storageKey = `posData_${storeId}`;
       localStorage.setItem(storageKey, JSON.stringify(this.state));
-      console.log("💾 Data saved for store:", storeId);
+      console.log("💾 Data saved locally for store:", storeId);
 
-      // Sync to Firebase in background (don't wait)
+      // Always sync to Firebase immediately if authenticated
       if (window.FirebaseService && FirebaseService.isAuthenticated()) {
-        this.syncWithFirebase().catch(console.error);
+        // Don't wait for sync to complete, but handle errors
+        this.syncWithFirebase().then(() => {
+          console.log("☁️ Data synced to cloud");
+        }).catch(error => {
+          console.error("❌ Failed to sync to cloud:", error);
+          Utils.showToast("ไม่สามารถซิงค์ข้อมูลได้ กรุณาตรวจสอบการเชื่อมต่อ", "warning");
+        });
       }
     } catch (error) {
       console.error("❌ Error saving data:", error);
