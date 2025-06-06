@@ -683,41 +683,81 @@ const Payment = {
 
   // Refund functionality
   refund(saleId) {
-    const sale = App.getSaleById(saleId);
-    if (!sale) return;
+  const sale = App.getSaleById(saleId);
+  if (!sale) return;
 
-    Utils.confirm(
-      `ต้องการคืนเงินบิล #${sale.id} จำนวน ${Utils.formatCurrency(
-        sale.total
-      )}?`,
-      () => {
-        // Create refund record
-        const refund = {
-          ...sale,
-          id: Date.now(),
-          type: "refund",
-          originalSaleId: sale.id,
-          total: -sale.total,
-          subtotal: -sale.subtotal,
-          discount: -sale.discount,
-        };
+  // ป้องกันการ refund ซ้ำ
+  if (sale.type === "refund" || sale.refunded) {
+    Utils.showToast("บิลนี้ถูกคืนเงินแล้ว", "error");
+    return;
+  }
 
-        // Restore stock
-        sale.items.forEach((item) => {
-          const product = App.getProductById(item.id);
-          if (product) {
-            product.stock += item.quantity;
-          }
-        });
+  Utils.confirm(
+    `ต้องการคืนเงินบิล #${sale.id} จำนวน ${Utils.formatCurrency(sale.total)}?`,
+    () => {
+      // Create refund record
+      const refund = {
+        id: Date.now(),
+        type: "refund",
+        originalSaleId: sale.id,
+        items: sale.items.map(item => ({
+          ...item,
+          quantity: -item.quantity // ติดลบเพื่อหักออก
+        })),
+        total: -sale.total,
+        subtotal: -sale.subtotal,
+        discount: -sale.discount,
+        timestamp: Date.now(),
+        date: new Date().toISOString(),
+        paymentMethod: sale.paymentMethod,
+        cashier: Auth.getCurrentUser()?.username || "พนักงาน",
+        memberId: sale.memberId,
+        memberName: sale.memberName
+      };
 
-        App.addSale(refund);
-        Utils.showToast("คืนเงินสำเร็จ", "success");
+      // Restore stock
+      sale.items.forEach((item) => {
+        const product = App.getProductById(item.id);
+        if (product) {
+          App.updateProduct(item.id, {
+            stock: product.stock + item.quantity
+          });
+        }
+      });
 
-        // Show refund receipt
-        this.showRefundReceipt(refund);
+      // Mark original sale as refunded
+      const saleIndex = App.state.sales.findIndex(s => s.id === saleId);
+      if (saleIndex !== -1) {
+        App.state.sales[saleIndex].refunded = true;
+        App.state.sales[saleIndex].refundedAt = Date.now();
       }
-    );
-  },
+
+      // Add refund record
+      App.state.sales.push(refund);
+      App.saveData();
+
+      // Update member points if applicable
+      if (sale.memberId) {
+        const pointsToDeduct = Math.floor(Math.abs(sale.total) / (App.getSettings().pointRate || 100));
+        const member = App.state.members.find(m => m.id == sale.memberId);
+        if (member) {
+          member.points = Math.max(0, (member.points || 0) - pointsToDeduct);
+          member.totalPurchase = Math.max(0, (member.totalPurchase || 0) - Math.abs(sale.total));
+        }
+      }
+
+      Utils.showToast("คืนเงินสำเร็จ", "success");
+      this.showRefundReceipt(refund);
+      
+      // Refresh UI
+      if (BackOffice.currentPage === "sales") {
+        BackOffice.loadSalesHistory();
+      } else if (BackOffice.currentPage === "dashboard") {
+        BackOffice.updateDashboardStats();
+      }
+    }
+  );
+},
 
   // Show refund receipt
   showRefundReceipt(refund) {
