@@ -452,9 +452,22 @@ setInterval(() => {
         this.loadDefaultCategories();
       }
 
-      // Load products - filter out sample products
-      const productsSnapshot = await storeRef.collection("products").get();
-      const products = [];
+      // Load products
+const productsSnapshot = await storeRef.collection("products").get();
+console.log("📦 Loading products from Firebase, found:", productsSnapshot.size);
+
+const products = [];
+productsSnapshot.forEach((doc) => {
+  const data = doc.data();
+  console.log("Product from Firebase:", doc.id, data.name);
+  products.push({
+    ...data,
+    id: data.id || parseInt(doc.id),
+  });
+});
+
+this.state.products = products;
+console.log("Products loaded:", products.length);
       const defaultProductNames = [
         "อเมริกาโน่เย็น",
         "อเมริกาโน่ร้อน",
