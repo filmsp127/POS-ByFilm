@@ -153,36 +153,39 @@ const Products = {
 
   // Get best selling products
   getBestSelling(limit = 10, dateRange = null) {
-    const products = App.getProducts();
-    const sales = dateRange
-      ? App.getSalesByDateRange(dateRange.start, dateRange.end)
-      : App.getSales();
+  const products = App.getProducts();
+  const sales = dateRange
+    ? App.getSalesByDateRange(dateRange.start, dateRange.end)
+    : App.getSales();
 
-    // Calculate sales for each product
-    const productSales = {};
+  // Calculate sales for each product
+  const productSales = {};
 
-    sales.forEach((sale) => {
-      sale.items.forEach((item) => {
-        if (!productSales[item.id]) {
-          productSales[item.id] = {
-            id: item.id,
-            name: item.name,
-            quantity: 0,
-            revenue: 0,
-          };
-        }
-        productSales[item.id].quantity += item.quantity;
-        productSales[item.id].revenue += item.price * item.quantity;
-      });
+  sales.forEach((sale) => {
+    // ข้ามบิลที่ถูก refund
+    if (sale.refunded) return;
+    
+    sale.items.forEach((item) => {
+      if (!productSales[item.id]) {
+        productSales[item.id] = {
+          id: item.id,
+          name: item.name,
+          quantity: 0,
+          revenue: 0,
+        };
+      }
+      productSales[item.id].quantity += item.quantity;
+      productSales[item.id].revenue += item.price * item.quantity;
     });
+  });
 
-    // Sort by quantity sold
-    const sorted = Object.values(productSales).sort(
-      (a, b) => b.quantity - a.quantity
-    );
+  // Sort by quantity sold
+  const sorted = Object.values(productSales).sort(
+    (a, b) => b.quantity - a.quantity
+  );
 
-    return sorted.slice(0, limit);
-  },
+  return sorted.slice(0, limit);
+},
 
   // Update stock
   updateStock(productId, quantity, operation = "set") {
