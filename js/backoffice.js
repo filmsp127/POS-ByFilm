@@ -763,43 +763,44 @@ const BackOffice = {
   },
 
   updateDashboardStats() {
-    const today = new Date().toDateString();
-    const todaySales = App.getSales().filter(
-      (s) => new Date(s.date).toDateString() === today
-    );
+  const today = new Date().toDateString();
+  const todaySales = App.getSales().filter(
+    (s) => new Date(s.date).toDateString() === today && !s.refunded
+  );
 
-    const totalSales = todaySales.reduce((sum, sale) => sum + sale.total, 0);
-    const lowStockProducts = App.getProducts().filter(
-      (p) => p.stock < 10
-    ).length;
+  const totalSales = todaySales.reduce((sum, sale) => sum + sale.total, 0);
+  const lowStockProducts = App.getProducts().filter(
+    (p) => p.stock < 10
+  ).length;
 
-    // Find top product
-    const productSales = {};
-    todaySales.forEach((sale) => {
-      sale.items.forEach((item) => {
-        productSales[item.id] = (productSales[item.id] || 0) + item.quantity;
-      });
+  // Find top product (excluding refunded sales)
+  const productSales = {};
+  todaySales.forEach((sale) => {
+    if (sale.refunded) return;
+    
+    sale.items.forEach((item) => {
+      productSales[item.id] = (productSales[item.id] || 0) + item.quantity;
     });
+  });
 
-    const topProductId = Object.entries(productSales).sort(
-      (a, b) => b[1] - a[1]
-    )[0];
+  const topProductId = Object.entries(productSales).sort(
+    (a, b) => b[1] - a[1]
+  )[0];
 
-    document.getElementById("todaySales").textContent =
-      Utils.formatCurrency(totalSales);
-    document.getElementById("todayOrders").textContent = todaySales.length;
-    document.getElementById("lowStock").textContent = lowStockProducts;
+  document.getElementById("todaySales").textContent =
+    Utils.formatCurrency(totalSales);
+  document.getElementById("todayOrders").textContent = todaySales.length;
+  document.getElementById("lowStock").textContent = lowStockProducts;
 
-    if (topProductId) {
-      const product = App.getProductById(parseInt(topProductId[0]));
-      if (product) {
-        document.getElementById("topProduct").textContent = product.name;
-        document.getElementById(
-          "topProductQty"
-        ).textContent = `ขายไป ${topProductId[1]} ชิ้น`;
-      }
+  if (topProductId) {
+    const product = App.getProductById(parseInt(topProductId[0]));
+    if (product) {
+      document.getElementById("topProduct").textContent = product.name;
+      document.getElementById("topProductQty").textContent = 
+        `ขายไป ${topProductId[1]} ชิ้น`;
     }
-  },
+  }
+},
 
   loadTopProducts() {
     const container = document.getElementById("topProductsList");
