@@ -567,28 +567,37 @@
       <!-- Main POS Interface -->
       <div id="posInterface" class="flex flex-col h-full bg-gray-50">
         <!-- Top Bar -->
-        <div class="top-bar p-3 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <button onclick="BackOffice.openMenu()" class="menu-btn">
-              <i class="fas fa-bars text-xl"></i>
+        <!-- Top Bar -->
+<div class="top-bar p-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+        <button onclick="BackOffice.openMenu()" class="menu-btn">
+            <i class="fas fa-bars text-xl"></i>
+        </button>
+
+        <!-- User Button -->
+        <button onclick="App.showUserMenu()" class="user-btn">
+            <i class="fas fa-user text-xl"></i>
+        </button>
+        
+        <!-- Sync Status -->
+        <div class="flex items-center gap-2 px-3 py-1 bg-white/80 rounded-lg text-sm">
+            <span id="syncStatus"></span>
+            <button onclick="SyncManager.forceSync()" class="text-blue-600 hover:text-blue-700 ml-2" title="Force Sync">
+                <i class="fas fa-sync"></i>
             </button>
-
-            <!-- User Button -->
-            <button onclick="App.showUserMenu()" class="user-btn">
-              <i class="fas fa-user text-xl"></i>
-            </button>
-          </div>
-
-          <div class="total-display">
-            <div class="text-xs opacity-90">ยอดรวม</div>
-            <div class="text-xl font-bold" id="totalDisplay">฿0.00</div>
-          </div>
-
-          <button onclick="Cart.open()" class="cart-btn">
-            <i class="fas fa-shopping-basket text-xl"></i>
-            <span id="cartCount">0</span>
-          </button>
         </div>
+    </div>
+
+    <div class="total-display">
+        <div class="text-xs opacity-90">ยอดรวม</div>
+        <div class="text-xl font-bold" id="totalDisplay">฿0.00</div>
+    </div>
+
+    <button onclick="Cart.open()" class="cart-btn">
+        <i class="fas fa-shopping-basket text-xl"></i>
+        <span id="cartCount">0</span>
+    </button>
+</div>
 
         <!-- Category Tabs -->
         <div class="px-3 pb-3 overflow-x-auto">
@@ -628,6 +637,7 @@
     <script src="js/state.js"></script>
     <script src="js/firebase.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/sync-manager.js"></script>
     <script src="js/app.js"></script>
     <script src="js/pos.js"></script>
     <script src="js/cart.js"></script>
@@ -640,19 +650,22 @@
 
     <!-- Initialize App -->
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        // Initialize Firebase first
-        FirebaseService.init()
-          .then(() => {
-            // Then initialize App
-            App.init();
-          })
-          .catch((error) => {
-            console.error("Failed to initialize Firebase:", error);
-            // Initialize app without Firebase (local mode)
-            App.init();
-          });
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialize Firebase first
+    FirebaseService.init()
+      .then(() => {
+        // Initialize Sync Manager
+        SyncManager.init();
+        
+        // Then initialize App
+        App.init();
+      })
+      .catch((error) => {
+        console.error("Failed to initialize Firebase:", error);
+        // Initialize app without Firebase (local mode)
+        App.init();
       });
-    </script>
+  });
+</script>
   </body>
 </html>
