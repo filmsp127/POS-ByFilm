@@ -719,10 +719,19 @@ setInterval(() => {
     // Sync with Firebase - ปรับปรุงให้ sync ทุกอย่างรวมทั้ง sales
   async syncWithFirebase() {
     try {
-      if (!FirebaseService.currentStore) return;
+      if (!FirebaseService.currentStore) {
+        console.error("No current store for sync");
+        return;
+      }
 
+      console.log("Starting sync to Firebase...");
       const storeId = FirebaseService.currentStore.id;
       const storeRef = FirebaseService.db.collection("stores").doc(storeId);
+
+      // Log what we're syncing
+      console.log("Products to sync:", this.state.products.length);
+      console.log("Sales to sync:", this.state.sales.length);
+      console.log("Members to sync:", this.state.members.length);
 
       // Sync store settings
       await storeRef.set(
