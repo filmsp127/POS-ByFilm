@@ -862,70 +862,66 @@ const BackOffice = {
       const tr = document.createElement("tr");
       tr.className = "hover:bg-gray-50";
       tr.innerHTML = `
-                <td class="p-3">
-                    ${
-                      product.imageType === "url"
-                        ? `<img src="${product.image}" alt="${product.name}" class="w-12 h-12 rounded object-cover">`
-                        : `<div class="text-2xl w-12 h-12 flex items-center justify-center">${
-                            product.image || "📦"
-                          }</div>`
-                    }
-                </td>
-                <td class="p-3 text-gray-800" style="max-width: 200px;">
-                    <div class="font-medium truncate">${product.name}</div>
-                    ${
-                      product.code
-                        ? `<div class="text-xs text-gray-500">${product.code}</div>`
-                        : ""
-                    }
-                </td>
-                <td class="p-3 text-center">
-                    <span class="px-2 py-1 rounded-full text-xs ${
-                      category?.id === 2
-                        ? "bg-blue-100 text-blue-800"
-                        : category?.id === 3
-                        ? "bg-green-100 text-green-800"
-                        : "bg-pink-100 text-pink-800"
-                    }">
-                        ${category ? category.name : "-"}
-                    </span>
-                </td>
-                <td class="p-3 text-right text-gray-700">${Utils.formatCurrency(
-                  product.cost || 0
-                )}</td>
-                <td class="p-3 text-right text-gray-800 font-medium">${Utils.formatCurrency(
-                  product.price
-                )}</td>
-                <td class="p-3 text-right">
-                    <div class="text-gray-700">${Utils.formatCurrency(
-                      profit
-                    )}</div>
-                    <div class="text-xs ${
-                      profit > 0 ? "text-green-600" : "text-red-600"
-                    }">${profitPercent}%</div>
-                </td>
-                <td class="p-3 text-right">
-                    <span class="${
-                      product.stock < 10
-                        ? "text-red-600 font-medium"
-                        : "text-green-600"
-                    }">
-                        ${product.stock}
-                    </span>
-                </td>
-                <td class="p-3 text-center">
-                    <button onclick="BackOffice.editProduct(${
-                      product.id
-                    })" class="text-blue-600 hover:text-blue-700 mr-2">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button onclick="BackOffice.deleteProduct(${
-                      product.id
-                    })" class="text-red-600 hover:text-red-700">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            `;
+        <td class="p-3">
+          ${
+            product.imageType === "url"
+              ? `<img src="${product.image}" alt="${product.name}" class="w-12 h-12 rounded object-cover">`
+              : `<div class="text-2xl w-12 h-12 flex items-center justify-center">${
+                  product.image || "📦"
+                }</div>`
+          }
+        </td>
+        <td class="p-3 text-gray-800" style="max-width: 200px;">
+          <div class="font-medium truncate">${product.name}</div>
+          ${
+            product.code
+              ? `<div class="text-xs text-gray-500">${product.code}</div>`
+              : ""
+          }
+        </td>
+        <td class="p-3 text-center">
+          <span class="px-2 py-1 rounded-full text-xs ${
+            category?.id === 2
+              ? "bg-blue-100 text-blue-800"
+              : category?.id === 3
+              ? "bg-green-100 text-green-800"
+              : "bg-pink-100 text-pink-800"
+          }">
+            ${category ? category.name : "-"}
+          </span>
+        </td>
+        <td class="p-3 text-right text-gray-700">${Utils.formatCurrency(
+          product.cost || 0
+        )}</td>
+        <td class="p-3 text-right text-gray-800 font-medium">${Utils.formatCurrency(
+          product.price
+        )}</td>
+        <td class="p-3 text-right">
+          <div class="text-gray-700">${Utils.formatCurrency(profit)}</div>
+          <div class="text-xs ${
+            profit > 0 ? "text-green-600" : "text-red-600"
+          }">${profitPercent}%</div>
+        </td>
+        <td class="p-3 text-right">
+          <span class="${
+            product.stock < 10 ? "text-red-600 font-medium" : "text-green-600"
+          }">
+            ${product.stock}
+          </span>
+        </td>
+        <td class="p-3 text-center">
+          <button onclick="BackOffice.editProduct(${
+            product.id
+          })" class="text-blue-600 hover:text-blue-700 mr-2">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button onclick="BackOffice.deleteProduct(${
+            product.id
+          })" class="text-red-600 hover:text-red-700">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      `;
       tbody.appendChild(tr);
     });
   },
@@ -1039,24 +1035,29 @@ const BackOffice = {
       price: parseFloat(document.getElementById("productPrice").value),
       cost: parseFloat(document.getElementById("productCost").value) || 0,
       stock: parseInt(document.getElementById("productStock").value),
-      category: parseInt(document.getElementById("productCategory").value),
+      category: parseInt(document.getElementById("productCategory").value), // แน่ใจว่าเป็น integer
       barcode: document.getElementById("productBarcode").value,
       image: document.getElementById("productImage").value || "📦",
       imageType: document.getElementById("productImageType").value,
     };
 
     if (productId) {
-      // Update existing
       App.updateProduct(parseInt(productId), productData);
       Utils.showToast("แก้ไขสินค้าสำเร็จ", "success");
     } else {
-      // Add new
       App.addProduct(productData);
       Utils.showToast("เพิ่มสินค้าสำเร็จ", "success");
+    }
+    // Sync to Firebase if available
+    if (window.FirebaseService && FirebaseService.isAuthenticated()) {
+      App.syncWithFirebase();
     }
 
     this.loadProductsList();
     this.closeProductModal();
+
+    // Refresh POS display
+    POS.refresh();
   },
 
   editProduct(id) {
@@ -1492,6 +1493,7 @@ const BackOffice = {
       const paymentColor =
         sale.paymentMethod === "cash" ? "text-green-600" : "text-blue-600";
 
+      // แก้ไขการแสดงชื่อลูกค้า
       const customerName =
         sale.memberName || sale.customerName || "ลูกค้าทั่วไป";
 
@@ -1503,7 +1505,9 @@ const BackOffice = {
               ${Utils.formatDate(sale.date, "long")}
             </div>
             <div class="text-sm text-gray-500 mt-1">
-              ${customerName} • ${sale.items.length} รายการ
+              <i class="fas fa-user mr-1"></i>${customerName} 
+              <span class="mx-2">•</span>
+              <i class="fas fa-box mr-1"></i>${sale.items.length} รายการ
             </div>
           </div>
           <div class="text-right">
