@@ -1134,24 +1134,19 @@ setInterval(() => {
     return this.state.products.find((p) => p.id === id);
   },
 
-  addProduct(product) {
+  async addProduct(product) {
+  try {
     product.id = Date.now();
+    product.createdAt = new Date().toISOString();
+    
+    // Add to local state first
     this.state.products.push(product);
-    this.saveData();
-
-    // Sync immediately
-    if (window.FirebaseService && FirebaseService.isAuthenticated()) {
-      this.syncProductToFirebase(product);
-    }
-
-    return product;
-  },
-
-  // Sync single product to Firebase
-  async syncProductToFirebase(product) {
-    try {
-      if (!FirebaseService.currentStore) return;
-
+    
+    // Save to localStorage immediately
+    this.saveData(true); // Skip Firebase sync in saveData
+    
+    // Sync to Firebase immediately if online
+    if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
       const storeId = FirebaseService.currentStore.id;
       await FirebaseService.db
         .collection("stores")
@@ -1161,32 +1156,124 @@ setInterval(() => {
         .set({
           ...product,
           lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+          storeId: storeId
         });
-
-      console.log("Product synced:", product.name);
-    } catch (error) {
-      console.error("Error syncing product:", error);
-    }
-  },
-
-  updateProduct(id, updates) {
-    const index = this.state.products.findIndex((p) => p.id === id);
-    if (index !== -1) {
-      this.state.products[index] = {
-        ...this.state.products[index],
-        ...updates,
-      };
-      this.saveData();
-
-      // Sync to Firebase
-      if (window.FirebaseService && FirebaseService.isAuthenticated()) {
-        this.syncProductToFirebase(this.state.products[index]);
+      console.log("✅ Product synced to Firebase:", product.name);
+    } else {
+      // Queue for later sync if offline
+      if (window.SyncManager) {
+        SyncManager.queueOperation('product', product);
       }
-
-      return true;
     }
-    return false;
-  },
+    
+    return product;
+  } catch (error) {
+    console.error("Error adding product:", error);
+    
+    // Remove from local state on error
+    const index = this.state.products.findIndex(p => p.id === product.id);
+    if (index !== -1) {
+      this.state.products.splice(index, 1);
+    }
+    
+    throw error;
+  }
+},
+
+  async saveProduct(event) {
+  event.preventDefault();
+
+  const productId = document.getElementById("editProductId").value;
+  const productData = {
+    code: document.getElementById("productCode").value,
+    name: document.getElementById("productName").value,
+    price: parseFloat(document.getElementById("productPrice").value),
+    cost: parseFloat(document.getElementById("productCost").value) || 0,
+    stock: parseInt(document.getElementById("productStock").value),
+    category: parseInt(document.getElementById("productCategory").value),
+    barcode: document.getElementById("productBarcode").value,
+    image: document.getElementById("productImage").value || "📦",
+    imageType: document.getElementById("productImageType").value,
+  };
+
+  Utils.showLoading("กำลังบันทึกสินค้า...");
+
+  try {
+    if (productId) {
+      // Update existing product
+      const success = await App.updateProduct(parseInt(productId), productData);
+      if (success) {
+        Utils.hideLoading();
+        Utils.showToast("แก้ไขสินค้าสำเร็จ", "success");
+      } else {
+        throw new Error("Failed to update product");
+      }
+    } else {
+      // Add new product
+      const newProduct = await App.addProduct(productData);
+      if (newProduct) {
+        Utils.hideLoading();
+        Utils.showToast("เพิ่มสินค้าสำเร็จ", "success");
+      } else {
+        throw new Error("Failed to add product");
+      }
+    }
+
+    // Reload products list
+    this.loadProductsList();
+    this.closeProductModal();
+    POS.refresh();
+    
+  } catch (error) {
+    Utils.hideLoading();
+    console.error("Save product error:", error);
+    Utils.showToast("บันทึกสินค้าไม่สำเร็จ: " + error.message, "error");
+  }
+},
+
+  async updateProduct(id, updates) {
+  try {
+    const index = this.state.products.findIndex((p) => p.id === id);
+    if (index === -1) {
+      return false;
+    }
+    
+    // Update local state
+    this.state.products[index] = {
+      ...this.state.products[index],
+      ...updates,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    // Save to localStorage
+    this.saveData(true); // Skip Firebase sync in saveData
+    
+    // Sync to Firebase immediately if online
+    if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+      const storeId = FirebaseService.currentStore.id;
+      await FirebaseService.db
+        .collection("stores")
+        .doc(storeId)
+        .collection("products")
+        .doc(id.toString())
+        .set({
+          ...this.state.products[index],
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      console.log("✅ Product updated in Firebase:", this.state.products[index].name);
+    } else {
+      // Queue for later sync if offline
+      if (window.SyncManager) {
+        SyncManager.queueOperation('product', this.state.products[index]);
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error updating product:", error);
+    throw error;
+  }
+},
 
   deleteProduct(id) {
     this.state.products = this.state.products.filter((p) => p.id !== id);
