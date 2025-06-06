@@ -35,6 +35,7 @@ const App = {
   lastActivity: Date.now(),
   lockCheckInterval: null,
   unsubscribers: [],
+  syncTimeout: null,
 
   // Initialize application
   init() {
