@@ -1493,4 +1493,49 @@ setInterval(() => {
       Utils.showToast("Sync ผิดพลาด: " + error.message, "error");
     }
   },
+  // Debug sync issues
+async debugSync() {
+    console.log("=== DEBUG SYNC ===");
+    console.log("1. Current Store:", this.state.currentStoreId);
+    console.log("2. Firebase Store:", FirebaseService.currentStore);
+    console.log("3. Local Products:", this.state.products);
+    console.log("4. Local Sales:", this.state.sales);
+    console.log("5. Local Members:", this.state.members);
+    
+    if (FirebaseService.currentStore) {
+      const storeId = FirebaseService.currentStore.id;
+      
+      // Check Firebase data
+      try {
+        const storeRef = FirebaseService.db.collection("stores").doc(storeId);
+        
+        // Products
+        const productsSnap = await storeRef.collection("products").get();
+        console.log("6. Firebase Products:", productsSnap.size);
+        productsSnap.forEach(doc => {
+          console.log("   -", doc.id, doc.data().name);
+        });
+        
+        // Sales
+        const salesSnap = await storeRef.collection("sales").get();
+        console.log("7. Firebase Sales:", salesSnap.size);
+        
+        // Members
+        const membersSnap = await storeRef.collection("members").get();
+        console.log("8. Firebase Members:", membersSnap.size);
+        
+      } catch (error) {
+        console.error("Firebase read error:", error);
+      }
+    }
+    
+    // Try force sync
+    console.log("9. Attempting force sync...");
+    try {
+      await this.syncWithFirebase();
+      console.log("10. Sync completed!");
+    } catch (error) {
+      console.error("11. Sync failed:", error);
+    }
+},
 };
