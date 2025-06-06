@@ -99,39 +99,45 @@ const Products = {
 
   // Get product revenue
   getProductRevenue(productId) {
-    const sales = App.getSales();
-    let totalRevenue = 0;
+  const sales = App.getSales();
+  let totalRevenue = 0;
 
-    sales.forEach((sale) => {
-      sale.items.forEach((item) => {
-        if (item.id === productId) {
-          totalRevenue += item.price * item.quantity;
-        }
-      });
+  sales.forEach((sale) => {
+    // ข้ามบิลที่ถูก refund แล้ว
+    if (sale.refunded) return;
+    
+    sale.items.forEach((item) => {
+      if (item.id === productId) {
+        totalRevenue += item.price * item.quantity;
+      }
     });
+  });
 
-    return totalRevenue;
-  },
+  return totalRevenue;
+},
 
   // Get product profit
   getProductProfit(productId) {
-    const product = App.getProductById(productId);
-    if (!product || !product.cost) return 0;
+  const product = App.getProductById(productId);
+  if (!product || !product.cost) return 0;
 
-    const sales = App.getSales();
-    let totalProfit = 0;
+  const sales = App.getSales();
+  let totalProfit = 0;
 
-    sales.forEach((sale) => {
-      sale.items.forEach((item) => {
-        if (item.id === productId) {
-          const profit = (item.price - product.cost) * item.quantity;
-          totalProfit += profit;
-        }
-      });
+  sales.forEach((sale) => {
+    // ข้ามบิลที่ถูก refund แล้ว
+    if (sale.refunded) return;
+    
+    sale.items.forEach((item) => {
+      if (item.id === productId) {
+        const profit = (item.price - product.cost) * item.quantity;
+        totalProfit += profit;
+      }
     });
+  });
 
-    return totalProfit;
-  },
+  return totalProfit;
+},
 
   // Get low stock products
   getLowStock() {
