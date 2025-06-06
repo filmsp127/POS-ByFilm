@@ -181,13 +181,6 @@ const Auth = {
               <i class="fas fa-user-plus mr-2"></i>สมัครสมาชิก
             </button>
           </form>
-  
-          <!-- Demo Mode -->
-          <div class="mt-4 sm:mt-6 pt-4 border-t border-gray-200 text-center">
-            <button onclick="Auth.switchToLocalMode()" class="text-xs sm:text-sm text-gray-500 hover:text-gray-700">
-              <i class="fas fa-desktop mr-1"></i>ใช้งานแบบออฟไลน์ (ร้านเดียว)
-            </button>
-          </div>
         </div>
       `;
 
@@ -306,9 +299,13 @@ const Auth = {
       const result = await FirebaseService.signUp(email, password, {
         name,
         pin: this.hashPin(pin),
+        displayName: name, // เพิ่ม displayName
       });
 
       if (result.success) {
+        // Update display name
+        await result.user.updateProfile({ displayName: name });
+
         // Create store for the user
         const storeResult = await FirebaseService.createStore({
           name: storeName,
@@ -321,9 +318,9 @@ const Auth = {
           Utils.hideLoading();
           Utils.showToast("สร้างบัญชีและร้านสำเร็จ!", "success");
 
-          // Close modal and reload
-          this.closeAuthModal();
+          // รอสักครู่ให้ Firebase update
           setTimeout(() => {
+            this.closeAuthModal();
             location.reload();
           }, 1500);
         } else {
@@ -332,12 +329,26 @@ const Auth = {
         }
       } else {
         Utils.hideLoading();
-        Utils.showToast(`สร้างบัญชีไม่สำเร็จ: ${result.error}`, "error");
+
+        // แปลง error message
+        let errorMessage = result.error;
+        if (result.error.includes("email-already-in-use")) {
+          errorMessage = "อีเมลนี้ถูกใช้งานแล้ว";
+        } else if (result.error.includes("invalid-email")) {
+          errorMessage = "รูปแบบอีเมลไม่ถูกต้อง";
+        } else if (result.error.includes("weak-password")) {
+          errorMessage = "รหัสผ่านไม่ปลอดภัย";
+        }
+
+        Utils.showToast(`สร้างบัญชีไม่สำเร็จ: ${errorMessage}`, "error");
       }
     } catch (error) {
       Utils.hideLoading();
       console.error("Signup error:", error);
-      Utils.showToast("เกิดข้อผิดพลาดในการสมัครสมาชิก", "error");
+      Utils.showToast(
+        "เกิดข้อผิดพลาดในการสมัครสมาชิก: " + error.message,
+        "error"
+      );
     }
   },
 
