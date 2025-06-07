@@ -398,72 +398,103 @@ const Categories = {
   // Create category modal
   showAddCategoryModal() {
     const content = `
-        <div class="p-6">
-          <h3 class="text-xl font-bold text-gray-800 mb-4">เพิ่มหมวดหมู่ใหม่</h3>
+        <div class="modal-with-footer h-full flex flex-col">
+          <div class="modal-header bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4">
+            <h3 class="text-xl font-bold">เพิ่มหมวดหมู่ใหม่</h3>
+          </div>
           
-          <form onsubmit="Categories.handleAddCategory(event)">
-            <div class="space-y-4">
-              <div>
-                <label class="text-gray-700 text-sm font-medium">ชื่อหมวดหมู่ *</label>
-                <input type="text" id="categoryName" required
-                       class="w-full mt-1 p-2 rounded-lg border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                       placeholder="เช่น เครื่องดื่มร้อน">
-              </div>
-              
-              <div>
-                <label class="text-gray-700 text-sm font-medium">ไอคอน</label>
-                <div class="grid grid-cols-6 gap-2 mt-2 max-h-48 overflow-y-auto p-2 border border-gray-200 rounded-lg">
-                  ${this.availableIcons
-                    .map(
-                      (item) => `
-                    <button type="button" 
-                            onclick="Categories.selectIcon('${item.icon}', this)"
-                            class="icon-option p-3 rounded-lg hover:bg-gray-100 text-gray-600 transition"
-                            title="${item.name}">
-                      <i class="fas ${item.icon} text-xl"></i>
-                    </button>
-                  `
-                    )
-                    .join("")}
+          <div class="modal-body">
+            <form onsubmit="Categories.handleAddCategory(event)" id="categoryForm">
+              <div class="space-y-4">
+                <div>
+                  <label class="text-gray-700 text-sm font-medium">ชื่อหมวดหมู่ *</label>
+                  <input type="text" id="categoryName" required
+                         class="w-full mt-1 p-2 rounded-lg border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                         placeholder="เช่น เครื่องดื่มร้อน">
                 </div>
-                <input type="hidden" id="categoryIcon" value="fa-tag">
-              </div>
-              
-              <div>
-                <label class="text-gray-700 text-sm font-medium">สี</label>
-                <div class="grid grid-cols-6 gap-2 mt-2">
-                  ${this.availableColors
-                    .map(
-                      (color) => `
-                    <button type="button"
-                            onclick="Categories.selectColor('${color.value}', this)"
-                            class="color-option p-3 rounded-lg transition hover:scale-110"
-                            style="background-color: ${color.hex};"
-                            title="${color.name}">
-                    </button>
-                  `
-                    )
-                    .join("")}
+                
+                <div>
+                  <label class="text-gray-700 text-sm font-medium">ไอคอน</label>
+                  
+                  <!-- Search Icon -->
+                  <input type="text" id="iconSearch" placeholder="ค้นหาไอคอน..." 
+                         onkeyup="Categories.filterIcons(this.value)"
+                         class="w-full mt-1 mb-2 p-2 rounded-lg border border-gray-300 text-gray-800 text-sm">
+                  
+                  <!-- Icon Categories -->
+                  <div class="mb-2">
+                    <select id="iconCategory" onchange="Categories.filterIconsByCategory(this.value)"
+                            class="w-full p-2 rounded-lg border border-gray-300 text-gray-800 text-sm">
+                      <option value="">ทั้งหมด</option>
+                      <option value="food">อาหาร/เครื่องดื่ม</option>
+                      <option value="product">สินค้าทั่วไป</option>
+                      <option value="fashion">แฟชั่น</option>
+                      <option value="electronic">อิเล็กทรอนิกส์</option>
+                      <option value="service">บริการ</option>
+                      <option value="health">สุขภาพ</option>
+                      <option value="other">อื่นๆ</option>
+                    </select>
+                  </div>
+                  
+                  <div class="grid grid-cols-6 gap-2 max-h-64 overflow-y-auto p-2 border border-gray-200 rounded-lg" id="iconGrid">
+                    ${this.availableIcons
+                      .map(
+                        (item, index) => `
+                      <button type="button" 
+                              onclick="Categories.selectIcon('${item.icon}', this)"
+                              class="icon-option p-3 rounded-lg hover:bg-gray-100 text-gray-600 transition"
+                              title="${item.name}"
+                              data-name="${item.name.toLowerCase()}"
+                              data-category="${this.getIconCategory(item.icon)}">
+                        <i class="fas ${item.icon} text-xl"></i>
+                      </button>
+                    `
+                      )
+                      .join("")}
+                  </div>
+                  <input type="hidden" id="categoryIcon" value="fa-tag">
+                  <div class="text-xs text-gray-500 mt-1">เลือกไอคอนที่เหมาะสมกับหมวดหมู่ของคุณ</div>
                 </div>
-                <input type="hidden" id="categoryColor" value="gray">
+                
+                <div>
+                  <label class="text-gray-700 text-sm font-medium">สี</label>
+                  <div class="grid grid-cols-6 gap-2 mt-2">
+                    ${this.availableColors
+                      .map(
+                        (color) => `
+                      <button type="button"
+                              onclick="Categories.selectColor('${color.value}', this)"
+                              class="color-option p-3 rounded-lg transition hover:scale-110"
+                              style="background-color: ${color.hex};"
+                              title="${color.name}">
+                      </button>
+                    `
+                      )
+                      .join("")}
+                  </div>
+                  <input type="hidden" id="categoryColor" value="gray">
+                  <div class="text-xs text-gray-500 mt-1">เลือกสีเพื่อแยกแยะหมวดหมู่</div>
+                </div>
               </div>
-            </div>
-            
-            <div class="flex gap-3 mt-6">
+            </form>
+          </div>
+          
+          <div class="modal-footer">
+            <div class="flex gap-3">
               <button type="button" onclick="Utils.closeModal(this.closest('.fixed'))"
                       class="flex-1 bg-gray-200 hover:bg-gray-300 py-2 rounded-lg text-gray-800 transition">
                 ยกเลิก
               </button>
-              <button type="submit"
+              <button type="submit" form="categoryForm"
                       class="flex-1 btn-primary py-2 rounded-lg text-white">
                 เพิ่มหมวดหมู่
               </button>
             </div>
-          </form>
+          </div>
         </div>
       `;
 
-    Utils.createModal(content, { size: "w-full max-w-lg" });
+    Utils.createModal(content, { size: "w-full max-w-lg", mobileFullscreen: true });
   },
 
   // Handle icon selection
