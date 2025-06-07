@@ -1,24 +1,79 @@
 // Shift Manager Module - จัดการระบบเปิด-ปิดรอบ
 const ShiftManager = {
   currentShift: null,
+  shiftListener: null, // เพิ่ม listener reference
   
   // Initialize shift manager
   init() {
-  console.log("🔄 Initializing Shift Manager...");
+    console.log("🔄 Initializing Shift Manager...");
+    
+    // Load from localStorage first
+    this.loadCurrentShift();
+    
+    // Setup realtime listener
+    if (window.FirebaseService && FirebaseService.isAuthenticated()) {
+      this.setupRealtimeListener();
+    }
+    
+    this.updateUI();
+    
+    // Check shift status every minute
+    setInterval(() => this.updateUI(), 60000);
+  },
   
-  // Load from localStorage first
-  this.loadCurrentShift();
-  
-  // Then check Firebase for latest data
-  if (window.FirebaseService && FirebaseService.isAuthenticated()) {
-    this.loadShiftFromFirebase();
-  }
-  
-  this.updateUI();
-  
-  // Check shift status every minute
-  setInterval(() => this.updateUI(), 60000);
-},
+  // Setup realtime listener for shifts
+  setupRealtimeListener() {
+    if (!FirebaseService.currentStore) return;
+    
+    // Clean up existing listener
+    if (this.shiftListener) {
+      this.shiftListener();
+      this.shiftListener = null;
+    }
+    
+    const storeId = FirebaseService.currentStore.id;
+    
+    // Listen to open shifts only
+    this.shiftListener = FirebaseService.db
+      .collection('stores')
+      .doc(storeId)
+      .collection('shifts')
+      .where('status', '==', 'open')
+      .onSnapshot((snapshot) => {
+        console.log('📥 Shift changes detected:', snapshot.size);
+        
+        if (!snapshot.empty) {
+          // มีรอบที่เปิดอยู่
+          const doc = snapshot.docs[0];
+          const shift = { id: doc.id, ...doc.data() };
+          
+          // Check if it's our shift or someone else's
+          const currentUser = Auth.getCurrentUser();
+          const isOurShift = this.currentShift && this.currentShift.id === shift.id;
+          
+          if (!isOurShift) {
+            // Someone else opened a shift
+            console.log('🔄 Another device opened shift:', shift.employeeName);
+            Utils.showToast(`${shift.employeeName} เปิดรอบแล้ว`, "info");
+          }
+          
+          this.currentShift = shift;
+          this.saveCurrentShift();
+          this.updateUI();
+        } else {
+          // ไม่มีรอบที่เปิด
+          if (this.currentShift) {
+            console.log('🔄 Shift was closed');
+            Utils.showToast('รอบถูกปิดแล้ว', "info");
+            this.currentShift = null;
+            this.saveCurrentShift();
+            this.updateUI();
+          }
+        }
+      }, (error) => {
+        console.error('Shift listener error:', error);
+      });
+  },
   
   // Load current shift from storage
   loadCurrentShift() {
@@ -35,61 +90,6 @@ const ShiftManager = {
       }
     }
   },
-  // Update current shift from Firebase
-updateFromFirebase(shift) {
-  console.log('📥 Updating shift from Firebase:', shift);
-  
-  // Check if it's the same store
-  const storeId = App.state.currentStoreId;
-  if (!storeId) return;
-  
-  this.currentShift = shift;
-  this.saveCurrentShift();
-  this.updateUI();
-  
-  // Notify user if needed
-  if (!this.notifiedAboutShift) {
-    Utils.showToast(`มีรอบที่เปิดอยู่: ${shift.employeeName}`, "info");
-    this.notifiedAboutShift = true;
-  }
-},
-
-// Clear current shift when no open shift
-clearCurrentShift() {
-  if (this.currentShift) {
-    console.log('🔄 Clearing current shift - no open shift in Firebase');
-    this.currentShift = null;
-    this.saveCurrentShift();
-    this.updateUI();
-    this.notifiedAboutShift = false;
-  }
-},
-
-// Load shift from Firebase on init
-async loadShiftFromFirebase() {
-  if (!FirebaseService.currentStore) return;
-  
-  try {
-    const storeId = FirebaseService.currentStore.id;
-    const snapshot = await FirebaseService.db
-      .collection('stores')
-      .doc(storeId)
-      .collection('shifts')
-      .where('status', '==', 'open')
-      .limit(1)
-      .get();
-    
-    if (!snapshot.empty) {
-      const doc = snapshot.docs[0];
-      const shift = { id: doc.id, ...doc.data() };
-      this.updateFromFirebase(shift);
-    } else {
-      this.clearCurrentShift();
-    }
-  } catch (error) {
-    console.error('Error loading shift from Firebase:', error);
-  }
-}
   
   // Save current shift
   saveCurrentShift() {
@@ -113,7 +113,7 @@ async loadShiftFromFirebase() {
     return this.currentShift;
   },
   
-  // Open shift
+  // Open shift - แก้ไขให้ sync ทันที
   async openShift(employeeName, openingCash, notes = '') {
     if (this.isShiftOpen()) {
       Utils.showToast("มีรอบที่เปิดอยู่แล้ว กรุณาปิดรอบก่อน", "error");
@@ -123,7 +123,7 @@ async loadShiftFromFirebase() {
     const now = new Date();
     const shiftNumber = await this.getNextShiftNumber();
     
-    this.currentShift = {
+    const newShift = {
       id: `SHIFT_${now.toISOString().split('T')[0]}_${String(shiftNumber).padStart(3, '0')}`,
       shiftNumber: shiftNumber,
       date: now.toISOString().split('T')[0],
@@ -146,24 +146,42 @@ async loadShiftFromFirebase() {
         refunds: 0,
         refundAmount: 0
       },
-      salesIds: [], // เก็บ ID ของบิลในรอบนี้
+      salesIds: [],
       status: 'open',
       notes: notes,
       closeNotes: ''
     };
     
-    // Save to state
+    // Sync to Firebase FIRST
+    if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+      try {
+        const storeId = FirebaseService.currentStore.id;
+        await FirebaseService.db
+          .collection('stores')
+          .doc(storeId)
+          .collection('shifts')
+          .doc(newShift.id)
+          .set({
+            ...newShift,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            storeId: storeId
+          });
+        
+        console.log('✅ Shift synced to Firebase immediately');
+      } catch (error) {
+        console.error('Error syncing shift:', error);
+        Utils.showToast('เปิดรอบได้แต่ sync ไม่สำเร็จ', 'warning');
+      }
+    }
+    
+    // Set current shift
+    this.currentShift = newShift;
     this.saveCurrentShift();
     
     // Add to shifts history
     if (!App.state.shifts) App.state.shifts = [];
-    App.state.shifts.push(this.currentShift);
+    App.state.shifts.push(newShift);
     App.saveData();
-    
-    // Sync to Firebase
-    if (window.FirebaseService && FirebaseService.isAuthenticated()) {
-      await this.syncShiftToFirebase(this.currentShift);
-    }
     
     console.log(`✅ Shift opened by ${employeeName}`);
     Utils.showToast(`เปิดรอบสำเร็จ - ${employeeName}`, "success");
@@ -172,7 +190,7 @@ async loadShiftFromFirebase() {
     return true;
   },
   
-  // Close shift
+  // Close shift - แก้ไขให้ sync ทันที
   async closeShift(actualCash, closeNotes = '') {
     if (!this.isShiftOpen()) {
       Utils.showToast("ไม่มีรอบที่เปิดอยู่", "error");
@@ -192,39 +210,40 @@ async loadShiftFromFirebase() {
     this.currentShift.status = 'closed';
     this.currentShift.closeNotes = closeNotes;
     
-    // Update status in Firebase immediately
-if (window.FirebaseService && FirebaseService.isAuthenticated()) {
-  const storeId = FirebaseService.currentStore.id;
-  await FirebaseService.db
-    .collection('stores')
-    .doc(storeId)
-    .collection('shifts')
-    .doc(this.currentShift.id)
-    .update({
-      status: 'closed',
-      closeTime: new Date().toISOString(),
-      actualCash: parseFloat(actualCash) || 0,
-      expectedCash: expectedCash,
-      difference: (parseFloat(actualCash) || 0) - expectedCash,
-      closeBy: Auth.getCurrentUser()?.uid || this.currentShift.employeeName,
-      closeNotes: closeNotes,
-      closedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-}
+    // Update in Firebase immediately
+    if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+      try {
+        const storeId = FirebaseService.currentStore.id;
+        await FirebaseService.db
+          .collection('stores')
+          .doc(storeId)
+          .collection('shifts')
+          .doc(this.currentShift.id)
+          .update({
+            status: 'closed',
+            closeTime: this.currentShift.closeTime,
+            closeBy: this.currentShift.closeBy,
+            actualCash: this.currentShift.actualCash,
+            expectedCash: this.currentShift.expectedCash,
+            difference: this.currentShift.difference,
+            closeNotes: this.currentShift.closeNotes,
+            closedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        
+        console.log('✅ Shift closed in Firebase');
+      } catch (error) {
+        console.error('Error closing shift in Firebase:', error);
+      }
+    }
     
     // Update in shifts array
     const shiftIndex = App.state.shifts.findIndex(s => s.id === this.currentShift.id);
     if (shiftIndex !== -1) {
-      App.state.shifts[shiftIndex] = this.currentShift;
+      App.state.shifts[shiftIndex] = {...this.currentShift};
     }
     
     // Save final state
     App.saveData();
-    
-    // Sync to Firebase
-    if (window.FirebaseService && FirebaseService.isAuthenticated()) {
-      await this.syncShiftToFirebase(this.currentShift);
-    }
     
     // Show close report
     this.showCloseReport(this.currentShift);
@@ -244,55 +263,27 @@ if (window.FirebaseService && FirebaseService.isAuthenticated()) {
   // Get next shift number for the day
   async getNextShiftNumber() {
     const today = new Date().toISOString().split('T')[0];
+    
+    // Try to get from Firebase first
+    if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+      try {
+        const storeId = FirebaseService.currentStore.id;
+        const snapshot = await FirebaseService.db
+          .collection('stores')
+          .doc(storeId)
+          .collection('shifts')
+          .where('date', '==', today)
+          .get();
+        
+        return snapshot.size + 1;
+      } catch (error) {
+        console.error('Error getting shift number:', error);
+      }
+    }
+    
+    // Fallback to local
     const todayShifts = (App.state.shifts || []).filter(s => s.date === today);
     return todayShifts.length + 1;
-  },
-  
-  // Add sale to current shift
-  addSaleToShift(sale) {
-    if (!this.isShiftOpen()) return;
-    
-    // Update shift sales data
-    this.currentShift.sales.bills++;
-    this.currentShift.sales.total += sale.total;
-    
-    // Update by payment method
-    if (sale.paymentMethod === 'cash') {
-      this.currentShift.sales.cash += sale.total;
-    } else if (sale.paymentMethod === 'transfer') {
-      this.currentShift.sales.transfer += sale.total;
-    } else {
-      this.currentShift.sales.other += sale.total;
-    }
-    
-    // Add sale ID
-    this.currentShift.salesIds.push(sale.id);
-    
-    // Update expected cash
-    if (sale.paymentMethod === 'cash') {
-      this.currentShift.expectedCash = this.currentShift.openingCash + this.currentShift.sales.cash - this.currentShift.sales.refundAmount;
-    }
-    
-    // Save
-    this.saveCurrentShift();
-    this.updateUI();
-  },
-  
-  // Add refund to current shift
-  addRefundToShift(refund) {
-    if (!this.isShiftOpen()) return;
-    
-    this.currentShift.sales.refunds++;
-    this.currentShift.sales.refundAmount += Math.abs(refund.total);
-    
-    // Update expected cash if refund was cash
-    if (refund.paymentMethod === 'cash') {
-      this.currentShift.expectedCash = this.currentShift.openingCash + this.currentShift.sales.cash - this.currentShift.sales.refundAmount;
-    }
-    
-    // Save
-    this.saveCurrentShift();
-    this.updateUI();
   },
   
   // Update UI
@@ -384,7 +375,7 @@ if (window.FirebaseService && FirebaseService.isAuthenticated()) {
       openShiftBtn.style.display = this.isShiftOpen() ? 'none' : 'block';
     }
     
-    if (Btn) {
+    if (closeShiftBtn) {
       closeShiftBtn.style.display = this.isShiftOpen() ? 'block' : 'none';
     }
     
@@ -393,19 +384,17 @@ if (window.FirebaseService && FirebaseService.isAuthenticated()) {
     addToCartButtons.forEach(btn => {
       if (!this.isShiftOpen()) {
         btn.classList.add('opacity-50', 'cursor-not-allowed');
-        btn.onclick = (e) => {
-          e.preventDefault();
-          Utils.showToast("กรุณาเปิดรอบก่อนทำการขาย", "error");
-        };
+      } else {
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
       }
     });
   },
   
   // Get shift duration
-  getShiftDuration(startTime) {
+  getShiftDuration(startTime, endTime = null) {
     const start = new Date(startTime);
-    const now = new Date();
-    const diff = now - start;
+    const end = endTime ? new Date(endTime) : new Date();
+    const diff = end - start;
     
     const hours = Math.floor(diff / 3600000);
     const minutes = Math.floor((diff % 3600000) / 60000);
@@ -425,7 +414,7 @@ if (window.FirebaseService && FirebaseService.isAuthenticated()) {
           <h3 class="text-lg font-bold">เปิดรอบการขาย</h3>
         </div>
         
-        <div class="modal-body" style="padding-bottom: 100px;">
+        <div class="modal-body">
           <form id="openShiftForm" onsubmit="ShiftManager.processOpenShift(event)">
             <div class="space-y-4">
               <div>
@@ -466,19 +455,17 @@ if (window.FirebaseService && FirebaseService.isAuthenticated()) {
         </div>
         
         <div class="modal-footer">
-  <div class="flex gap-3 max-w-md mx-auto">
-    <button type="button" onclick="Utils.closeModal(this.closest('.fixed'))"
-            class="flex-1 bg-gray-200 hover:bg-gray-300 py-3 rounded-lg text-gray-800 font-medium transition"
-            style="pointer-events: auto; -webkit-touch-callout: default; touch-action: manipulation; min-height: 48px;">
-      ยกเลิก
-    </button>
-    <button type="submit" form="openShiftForm"
-            class="flex-1 bg-green-500 hover:bg-green-600 py-3 rounded-lg text-white font-medium transition"
-            style="pointer-events: auto; -webkit-touch-callout: default; touch-action: manipulation; min-height: 48px;">
-      <i class="fas fa-play mr-2"></i>เปิดรอบ
-    </button>
-  </div>
-</div>
+          <div class="flex gap-3">
+            <button type="button" onclick="Utils.closeModal(this.closest('.fixed'))"
+                    class="flex-1 bg-gray-200 hover:bg-gray-300 py-3 rounded-lg text-gray-800 font-medium transition">
+              ยกเลิก
+            </button>
+            <button type="submit" form="openShiftForm"
+                    class="flex-1 bg-green-500 hover:bg-green-600 py-3 rounded-lg text-white font-medium transition">
+              <i class="fas fa-play mr-2"></i>เปิดรอบ
+            </button>
+          </div>
+        </div>
       </div>
     `;
     
@@ -627,6 +614,88 @@ if (window.FirebaseService && FirebaseService.isAuthenticated()) {
     `;
     
     Utils.createModal(content, { size: 'w-full max-w-lg', mobileFullscreen: true });
+  },
+  
+  // Add sale to current shift
+  addSaleToShift(sale) {
+    if (!this.isShiftOpen()) return;
+    
+    // Update shift sales data
+    this.currentShift.sales.bills++;
+    this.currentShift.sales.total += sale.total;
+    
+    // Update by payment method
+    if (sale.paymentMethod === 'cash') {
+      this.currentShift.sales.cash += sale.total;
+    } else if (sale.paymentMethod === 'transfer') {
+      this.currentShift.sales.transfer += sale.total;
+    } else {
+      this.currentShift.sales.other += sale.total;
+    }
+    
+    // Add sale ID
+    this.currentShift.salesIds.push(sale.id);
+    
+    // Update expected cash
+    if (sale.paymentMethod === 'cash') {
+      this.currentShift.expectedCash = this.currentShift.openingCash + this.currentShift.sales.cash - this.currentShift.sales.refundAmount;
+    }
+    
+    // Save locally
+    this.saveCurrentShift();
+    
+    // Update Firebase
+    if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+      const storeId = FirebaseService.currentStore.id;
+      FirebaseService.db
+        .collection('stores')
+        .doc(storeId)
+        .collection('shifts')
+        .doc(this.currentShift.id)
+        .update({
+          sales: this.currentShift.sales,
+          salesIds: this.currentShift.salesIds,
+          expectedCash: this.currentShift.expectedCash,
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .catch(console.error);
+    }
+    
+    this.updateUI();
+  },
+  
+  // Add refund to current shift
+  addRefundToShift(refund) {
+    if (!this.isShiftOpen()) return;
+    
+    this.currentShift.sales.refunds++;
+    this.currentShift.sales.refundAmount += Math.abs(refund.total);
+    
+    // Update expected cash if refund was cash
+    if (refund.paymentMethod === 'cash') {
+      this.currentShift.expectedCash = this.currentShift.openingCash + this.currentShift.sales.cash - this.currentShift.sales.refundAmount;
+    }
+    
+    // Save locally
+    this.saveCurrentShift();
+    
+    // Update Firebase
+    if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+      const storeId = FirebaseService.currentStore.id;
+      FirebaseService.db
+        .collection('stores')
+        .doc(storeId)
+        .collection('shifts')
+        .doc(this.currentShift.id)
+        .update({
+          sales: this.currentShift.sales,
+          expectedCash: this.currentShift.expectedCash,
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .catch(console.error);
+    }
+    
+    this.updateUI();
   },
   
   // Calculate cash difference
@@ -1094,29 +1163,11 @@ if (window.FirebaseService && FirebaseService.isAuthenticated()) {
     return report;
   },
   
-  // Sync shift to Firebase
-  async syncShiftToFirebase(shift) {
-    try {
-      if (!FirebaseService.currentStore) return;
-      
-      const storeId = FirebaseService.currentStore.id;
-      await FirebaseService.db
-        .collection('stores')
-        .doc(storeId)
-        .collection('shifts')
-        .doc(shift.id)
-        .set({
-          ...shift,
-          syncedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      
-      console.log('Shift synced to Firebase:', shift.id);
-    } catch (error) {
-      console.error('Error syncing shift:', error);
-      // Queue for later sync
-      if (window.SyncManager) {
-        SyncManager.queueOperation('shift', shift);
-      }
+  // Cleanup on destroy
+  destroy() {
+    if (this.shiftListener) {
+      this.shiftListener();
+      this.shiftListener = null;
     }
   }
 };
