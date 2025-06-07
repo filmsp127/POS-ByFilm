@@ -371,15 +371,18 @@ body.modal-open {
   }
 
   /* Menu Icon Button */
-  .menu-btn {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.9));
-    border: 2px solid rgba(99, 102, 241, 0.2);
-    color: #667eea;
-    border-radius: 15px;
-    padding: 10px;
-    transition: all 0.2s ease;
-    backdrop-filter: blur(5px);
-  }
+.menu-btn {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.9));
+  border: 2px solid rgba(99, 102, 241, 0.2);
+  color: #667eea;
+  border-radius: 15px;
+  padding: 10px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(5px);
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
 
   .menu-btn:hover {
     background: linear-gradient(135deg, #667eea, #764ba2);
@@ -879,10 +882,10 @@ body.modal-open {
       <i class="fas fa-bars text-lg sm:text-xl"></i>
     </button>
 
-    <!-- User Button -->
-    <button onclick="App.showUserMenu()" class="user-btn hidden sm:block">
-      <i class="fas fa-user text-lg sm:text-xl"></i>
-    </button>
+    <!-- User Button - แสดงบนมือถือด้วย -->
+<button onclick="App.showUserMenu()" class="user-btn">
+  <i class="fas fa-user text-lg sm:text-xl"></i>
+</button>
     
     <!-- Sync Status - ซ่อนบนมือถือ -->
     <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-white/80 backdrop-filter backdrop-blur-sm rounded-lg text-sm border border-purple-200">
