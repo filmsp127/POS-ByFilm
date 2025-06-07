@@ -1357,6 +1357,13 @@ setInterval(() => {
   loadDefaultCategories() {
     console.log("Loading default categories...");
 
+    // ตรวจสอบว่ามี categories อยู่แล้วหรือไม่
+    if (this.state.categories && this.state.categories.length > 0) {
+      console.log("Categories already exist, keeping current categories");
+      return;
+    }
+
+    // โหลด default categories เฉพาะเมื่อยังไม่มีหมวดหมู่
     this.state.categories = [
       {
         id: 1,
@@ -1370,7 +1377,7 @@ setInterval(() => {
       { id: 4, name: "ของหวาน", icon: "fa-ice-cream", color: "pink" },
     ];
 
-    // Sync to Firebase
+    // Sync to Firebase เฉพาะ default categories
     if (
       window.FirebaseService &&
       FirebaseService.isAuthenticated() &&
@@ -1388,7 +1395,7 @@ setInterval(() => {
         batch.set(categoryRef, {
           ...category,
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        });
+        }, { merge: true }); // ใช้ merge เพื่อไม่ให้ทับข้อมูลเดิม
       });
 
       batch.commit().catch(console.error);
