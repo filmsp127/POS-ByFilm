@@ -157,7 +157,13 @@ createModal(content, options = {}) {
   closeModal(modal) {
     if (modal) {
       modal.style.opacity = "0";
-      setTimeout(() => modal.remove(), 300);
+      setTimeout(() => {
+        modal.remove();
+        // Re-enable body scroll
+        if (document.querySelectorAll('.fixed').length === 0) {
+          document.body.classList.remove('modal-open');
+        }
+      }, 300);
     }
   },
 
