@@ -1114,28 +1114,28 @@ const BackOffice = {
     // Close modal และ reload list
     this.closeProductModal();
     
-    // รอสักครู่ก่อน reload เพื่อให้ Firebase sync เสร็จ
+    // รอนานขึ้นเพื่อให้ Firebase sync เสร็จ
     setTimeout(() => {
       this.loadProductsList();
       POS.refresh();
-    }, 1000);
+    }, 2000); // เพิ่มจาก 1000 เป็น 2000
     
   } catch (error) {
-    Utils.hideLoading();
+    Utils.hideLoading(); // ต้องแน่ใจว่า hide loading ทุกกรณี
     console.error("Save product error:", error);
     
     // ถ้าเป็น rate limit ให้แจ้งผู้ใช้
-    if (error.code === 'resource-exhausted') {
-      Utils.showToast("ระบบถูกใช้งานมากเกินไป กรุณารอสักครู่แล้วลองใหม่", "error");
+    if (error.code === 'resource-exhausted' || error.message?.includes('resource-exhausted')) {
+      Utils.showToast("ระบบถูกใช้งานมากเกินไป กรุณารอ 30 วินาทีแล้วลองใหม่", "warning");
+      
+      // ปิด modal และ reload อยู่ดี แม้จะ error (เพราะข้อมูลอาจจะบันทึกใน local แล้ว)
+      this.closeProductModal();
+      setTimeout(() => {
+        this.loadProductsList();
+      }, 2000);
     } else {
       Utils.showToast("บันทึกสินค้าไม่สำเร็จ: " + error.message, "error");
     }
-    
-    // ปิด modal และ reload อยู่ดี แม้จะ error
-    this.closeProductModal();
-    setTimeout(() => {
-      this.loadProductsList();
-    }, 1000);
   }
 },
 
