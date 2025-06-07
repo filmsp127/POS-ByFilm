@@ -818,40 +818,36 @@ body.modal-open {
       <!-- Main POS Interface -->
       <div id="posInterface" class="flex flex-col h-full">
         <!-- Top Bar -->
-        <div class="top-bar p-3 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <button onclick="BackOffice.openMenu()" class="menu-btn">
-              <i class="fas fa-bars text-xl"></i>
-            </button>
+<div class="top-bar p-2 sm:p-3 flex items-center justify-between gap-2">
+  <div class="flex items-center gap-2 flex-shrink-0">
+    <button onclick="BackOffice.openMenu()" class="menu-btn">
+      <i class="fas fa-bars text-lg sm:text-xl"></i>
+    </button>
 
-            <!-- User Button -->
-            <button onclick="App.showUserMenu()" class="user-btn">
-              <i class="fas fa-user text-xl"></i>
-            </button>
-            
-            <!-- Sync Status -->
-            <div class="flex items-center gap-2 px-3 py-1 bg-white/80 backdrop-filter backdrop-blur-sm rounded-lg text-sm border border-purple-200">
-              <span id="syncStatus"></span>
-              <button onclick="SyncManager.forceSync()" class="text-purple-600 hover:text-purple-700 ml-2" title="Force Sync">
-                <i class="fas fa-sync"></i>
-              </button>
-              <!-- Debug Button -->
-              <button onclick="App.debugSync()" class="text-pink-600 hover:text-pink-700 ml-2" title="Debug Sync">
-                <i class="fas fa-bug"></i>
-              </button>
-            </div>
-          </div>
+    <!-- User Button -->
+    <button onclick="App.showUserMenu()" class="user-btn hidden sm:block">
+      <i class="fas fa-user text-lg sm:text-xl"></i>
+    </button>
+    
+    <!-- Sync Status - ซ่อนบนมือถือ -->
+    <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-white/80 backdrop-filter backdrop-blur-sm rounded-lg text-sm border border-purple-200">
+      <span id="syncStatus"></span>
+      <button onclick="SyncManager.forceSync()" class="text-purple-600 hover:text-purple-700 ml-2" title="Force Sync">
+        <i class="fas fa-sync"></i>
+      </button>
+    </div>
+  </div>
 
-          <div class="total-display">
-            <div class="text-xs opacity-90">ยอดรวม</div>
-            <div class="text-xl font-bold" id="totalDisplay">฿0.00</div>
-          </div>
+  <div class="total-display px-3 py-1 text-center flex-shrink-0">
+    <div class="text-xs opacity-90">ยอดรวม</div>
+    <div class="text-base sm:text-xl font-bold" id="totalDisplay">฿0.00</div>
+  </div>
 
-          <button onclick="Cart.open()" class="cart-btn">
-            <i class="fas fa-shopping-basket text-xl"></i>
-            <span id="cartCount">0</span>
-          </button>
-        </div>
+  <button onclick="Cart.open()" class="cart-btn relative flex-shrink-0">
+    <i class="fas fa-shopping-basket text-lg sm:text-xl"></i>
+    <span id="cartCount" class="absolute -top-2 -right-2">0</span>
+  </button>
+</div>
 
         <!-- Category Tabs -->
         <div class="px-3 pb-3 overflow-x-auto">
