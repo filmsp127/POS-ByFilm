@@ -111,6 +111,49 @@ queueOperation(operation) {
       Auth.showLogin();
     }
   },
+  // Force sync sales history
+async forceSyncSales() {
+  if (!FirebaseService.currentStore) return;
+  
+  try {
+    const storeId = FirebaseService.currentStore.id;
+    const storeRef = FirebaseService.db.collection("stores").doc(storeId);
+    
+    // Load sales from Firebase
+    const salesSnapshot = await storeRef
+      .collection("sales")
+      .orderBy("timestamp", "desc")
+      .limit(200) // เพิ่มจาก 100 เป็น 200
+      .get();
+    
+    const sales = [];
+    salesSnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data) {
+        sales.push({
+          ...data,
+          id: data.id || parseInt(doc.id),
+          timestamp: data.timestamp || data.date || Date.now()
+        });
+      }
+    });
+    
+    this.state.sales = sales.reverse();
+    this.saveData(true); // Save to localStorage only
+    
+    console.log("✅ Sales synced:", sales.length);
+    
+    // Update UI
+    if (BackOffice.currentPage === "sales") {
+      BackOffice.loadSalesHistory();
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error syncing sales:", error);
+    return false;
+  }
+},
 
   // Initialize the main application
   async initializeApp() {
@@ -865,6 +908,12 @@ setInterval(() => {
       return;
     }
 
+    // ตรวจสอบ rate limit timeout
+    if (this.rateLimitTimeout && Date.now() < this.rateLimitTimeout) {
+      console.log("Rate limited, waiting...");
+      return;
+    }
+
     this.isSyncing = true;
     console.log("Starting sync to Firebase...");
     
@@ -882,21 +931,21 @@ setInterval(() => {
 
     console.log("✅ Store settings synced");
     
-    // ไม่ sync ข้อมูลทั้งหมดทุกครั้ง - ให้ sync เฉพาะที่จำเป็น
-    // Real-time listeners จะจัดการการ sync ข้อมูลอื่นๆ
-
     this.isSyncing = false;
     return { success: true };
   } catch (error) {
     this.isSyncing = false;
     console.error("Error syncing to Firebase:", error);
     
-    // ถ้าเป็น rate limit error ให้ retry หลังจาก delay
+    // ถ้าเป็น rate limit error ให้ set timeout
     if (error.code === 'resource-exhausted') {
-      console.log("Rate limited, will retry later...");
+      console.log("Rate limited, will retry in 60 seconds...");
+      this.rateLimitTimeout = Date.now() + 60000; // รอ 60 วินาที
+      
+      // ตั้ง timeout เพื่อ clear flag
       setTimeout(() => {
-        this.syncWithFirebase();
-      }, 30000); // retry หลัง 30 วินาที
+        this.rateLimitTimeout = null;
+      }, 60000);
     }
     
     throw error;
