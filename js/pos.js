@@ -168,6 +168,11 @@ const POS = {
   },
 
   addToCart(product) {
+    // Check if shift is open (เพิ่มโค้ดนี้)
+  if (window.ShiftManager && !ShiftManager.isShiftOpen()) {
+    Utils.showToast("กรุณาเปิดรอบก่อนทำการขาย", "error");
+    return;
+  }
     if (product.stock <= 0) {
       Utils.showToast("สินค้าหมด", "error");
       return;
