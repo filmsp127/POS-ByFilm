@@ -32,28 +32,130 @@ const Categories = {
     },
   ],
 
-  // Available icons for categories
+  // Available icons for categories - เพิ่มไอคอนให้ครอบคลุมมากขึ้น
   availableIcons: [
-    { icon: "fa-mug-hot", name: "เครื่องดื่ม" },
+    // เครื่องดื่ม
+    { icon: "fa-mug-hot", name: "เครื่องดื่มร้อน" },
     { icon: "fa-coffee", name: "กาแฟ" },
-    { icon: "fa-wine-glass", name: "เครื่องดื่มแอลกอฮอล์" },
+    { icon: "fa-mug-saucer", name: "ชา" },
+    { icon: "fa-glass-water", name: "น้ำเปล่า" },
+    { icon: "fa-bottle-water", name: "น้ำดื่ม" },
+    { icon: "fa-wine-glass", name: "ไวน์" },
     { icon: "fa-beer", name: "เบียร์" },
-    { icon: "fa-utensils", name: "อาหาร" },
-    { icon: "fa-hamburger", name: "ฟาสต์ฟู้ด" },
+    { icon: "fa-martini-glass", name: "ค็อกเทล" },
+    { icon: "fa-champagne-glasses", name: "แชมเปญ" },
+    { icon: "fa-whiskey-glass", name: "วิสกี้" },
+    { icon: "fa-blender", name: "น้ำปั่น" },
+    { icon: "fa-glass-water-droplet", name: "น้ำผลไม้" },
+    
+    // อาหาร
+    { icon: "fa-utensils", name: "อาหารทั่วไป" },
+    { icon: "fa-burger", name: "เบอร์เกอร์" },
     { icon: "fa-pizza-slice", name: "พิซซ่า" },
     { icon: "fa-hotdog", name: "ฮอทดอก" },
-    { icon: "fa-ice-cream", name: "ไอศกรีม" },
-    { icon: "fa-birthday-cake", name: "เค้ก" },
-    { icon: "fa-cookie", name: "คุกกี้" },
-    { icon: "fa-candy-cane", name: "ลูกอม" },
-    { icon: "fa-apple-alt", name: "ผลไม้" },
-    { icon: "fa-carrot", name: "ผัก" },
+    { icon: "fa-bowl-rice", name: "ข้าว" },
+    { icon: "fa-bowl-food", name: "ก๋วยเตี๋ยว" },
+    { icon: "fa-bacon", name: "เบคอน" },
+    { icon: "fa-drumstick-bite", name: "ไก่" },
+    { icon: "fa-fish", name: "ปลา" },
+    { icon: "fa-shrimp", name: "กุ้ง" },
+    { icon: "fa-egg", name: "ไข่" },
     { icon: "fa-cheese", name: "ชีส" },
     { icon: "fa-bread-slice", name: "ขนมปัง" },
-    { icon: "fa-bacon", name: "เบคอน" },
-    { icon: "fa-egg", name: "ไข่" },
-    { icon: "fa-fish", name: "ปลา" },
-    { icon: "fa-drumstick-bite", name: "ไก่" },
+    { icon: "fa-plate-wheat", name: "พาสต้า" },
+    
+    // ของหวาน/ขนม
+    { icon: "fa-ice-cream", name: "ไอศกรีม" },
+    { icon: "fa-cake-candles", name: "เค้ก" },
+    { icon: "fa-cookie", name: "คุกกี้" },
+    { icon: "fa-candy-cane", name: "ลูกอม" },
+    { icon: "fa-stroopwafel", name: "วาฟเฟิล" },
+    { icon: "fa-cookie-bite", name: "ขนมกรุบกรอบ" },
+    
+    // ผลไม้/ผัก
+    { icon: "fa-apple-whole", name: "แอปเปิ้ล" },
+    { icon: "fa-lemon", name: "มะนาว" },
+    { icon: "fa-carrot", name: "แครอท" },
+    { icon: "fa-pepper-hot", name: "พริก" },
+    { icon: "fa-seedling", name: "ผักสด" },
+    
+    // สินค้าทั่วไป
+    { icon: "fa-shopping-basket", name: "สินค้าทั่วไป" },
+    { icon: "fa-box", name: "สินค้าบรรจุกล่อง" },
+    { icon: "fa-jar", name: "สินค้าบรรจุขวด" },
+    { icon: "fa-bottle-droplet", name: "เครื่องสำอาง" },
+    { icon: "fa-soap", name: "สบู่" },
+    { icon: "fa-spray-can-sparkles", name: "สเปรย์" },
+    { icon: "fa-pills", name: "ยา" },
+    { icon: "fa-syringe", name: "วัคซีน" },
+    { icon: "fa-tooth", name: "ทันตกรรม" },
+    
+    // เสื้อผ้า/แฟชั่น
+    { icon: "fa-shirt", name: "เสื้อ" },
+    { icon: "fa-user-tie", name: "เสื้อผ้าทางการ" },
+    { icon: "fa-vest", name: "เสื้อกั๊ก" },
+    { icon: "fa-socks", name: "ถุงเท้า" },
+    { icon: "fa-glasses", name: "แว่นตา" },
+    { icon: "fa-hat-cowboy", name: "หมวก" },
+    { icon: "fa-shoe-prints", name: "รองเท้า" },
+    { icon: "fa-bag-shopping", name: "กระเป๋า" },
+    { icon: "fa-gem", name: "เครื่องประดับ" },
+    { icon: "fa-ring", name: "แหวน" },
+    
+    // อุปกรณ์/เครื่องมือ
+    { icon: "fa-wrench", name: "เครื่องมือ" },
+    { icon: "fa-hammer", name: "ค้อน" },
+    { icon: "fa-screwdriver", name: "ไขควง" },
+    { icon: "fa-toolbox", name: "กล่องเครื่องมือ" },
+    { icon: "fa-paint-roller", name: "อุปกรณ์ทาสี" },
+    { icon: "fa-brush", name: "แปรง" },
+    
+    // อิเล็กทรอนิกส์
+    { icon: "fa-mobile-screen", name: "โทรศัพท์" },
+    { icon: "fa-laptop", name: "คอมพิวเตอร์" },
+    { icon: "fa-desktop", name: "คอมพิวเตอร์ตั้งโต๊ะ" },
+    { icon: "fa-tablet-screen-button", name: "แท็บเล็ต" },
+    { icon: "fa-headphones", name: "หูฟัง" },
+    { icon: "fa-camera", name: "กล้อง" },
+    { icon: "fa-tv", name: "ทีวี" },
+    { icon: "fa-gamepad", name: "เกม" },
+    { icon: "fa-keyboard", name: "คีย์บอร์ด" },
+    { icon: "fa-computer-mouse", name: "เมาส์" },
+    
+    // บริการ
+    { icon: "fa-scissors", name: "ตัดผม" },
+    { icon: "fa-spa", name: "สปา" },
+    { icon: "fa-dumbbell", name: "ฟิตเนส" },
+    { icon: "fa-car", name: "ยานยนต์" },
+    { icon: "fa-motorcycle", name: "มอเตอร์ไซค์" },
+    { icon: "fa-bicycle", name: "จักรยาน" },
+    { icon: "fa-gas-pump", name: "น้ำมัน" },
+    
+    // หนังสือ/การศึกษา
+    { icon: "fa-book", name: "หนังสือ" },
+    { icon: "fa-graduation-cap", name: "การศึกษา" },
+    { icon: "fa-pencil", name: "เครื่องเขียน" },
+    { icon: "fa-palette", name: "ศิลปะ" },
+    { icon: "fa-music", name: "ดนตรี" },
+    
+    // สุขภาพ
+    { icon: "fa-heart-pulse", name: "สุขภาพ" },
+    { icon: "fa-stethoscope", name: "การแพทย์" },
+    { icon: "fa-wheelchair", name: "ผู้พิการ" },
+    { icon: "fa-baby", name: "เด็กอ่อน" },
+    { icon: "fa-person-cane", name: "ผู้สูงอายุ" },
+    
+    // อื่นๆ
+    { icon: "fa-gift", name: "ของขวัญ" },
+    { icon: "fa-tag", name: "ป้ายราคา" },
+    { icon: "fa-tags", name: "หมวดหมู่" },
+    { icon: "fa-star", name: "พิเศษ" },
+    { icon: "fa-fire", name: "ยอดนิยม" },
+    { icon: "fa-bolt", name: "โปรโมชั่น" },
+    { icon: "fa-percent", name: "ส่วนลด" },
+    { icon: "fa-certificate", name: "คูปอง" },
+    { icon: "fa-ticket", name: "ตั๋ว" },
+    { icon: "fa-calendar", name: "กิจกรรม" }
   ],
 
   // Available colors
@@ -88,11 +190,17 @@ const Categories = {
   },
 
   // Create new category
-  create(categoryData) {
+  async create(categoryData) {
     const categories = this.getAll();
 
-    // Generate new ID
-    const newId = Math.max(...categories.map((c) => c.id)) + 1;
+    // Generate new ID - ต้องแน่ใจว่า ID ไม่ซ้ำ
+    const existingIds = categories.map(c => c.id);
+    let newId = Math.max(...existingIds) + 1;
+    
+    // ตรวจสอบ ID ซ้ำ
+    while (existingIds.includes(newId)) {
+      newId++;
+    }
 
     const newCategory = {
       id: newId,
@@ -105,7 +213,37 @@ const Categories = {
 
     // Add to state
     App.state.categories.push(newCategory);
-    App.saveData();
+    
+    // Save to localStorage first
+    App.saveData(true); // Skip Firebase sync in saveData
+
+    // Sync to Firebase directly
+    if (
+      window.FirebaseService &&
+      FirebaseService.isAuthenticated() &&
+      FirebaseService.currentStore
+    ) {
+      try {
+        const storeId = FirebaseService.currentStore.id;
+        await FirebaseService.db
+          .collection("stores")
+          .doc(storeId)
+          .collection("categories")
+          .doc(newCategory.id.toString())
+          .set({
+            ...newCategory,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            storeId: storeId
+          });
+        console.log("✅ Category synced to Firebase:", newCategory.name);
+      } catch (error) {
+        console.error("Error syncing category to Firebase:", error);
+        // Queue for later sync if offline
+        if (window.SyncManager) {
+          SyncManager.queueOperation('category', newCategory);
+        }
+      }
+    }
 
     Utils.showToast(`เพิ่มหมวดหมู่ "${newCategory.name}" สำเร็จ`, "success");
     return newCategory;
@@ -415,5 +553,57 @@ const Categories = {
       data,
       `categories-${new Date().toISOString().split("T")[0]}.csv`
     );
+  },
+  // Get icon category
+  getIconCategory(icon) {
+    const foodIcons = ['fa-mug-hot', 'fa-coffee', 'fa-mug-saucer', 'fa-glass-water', 'fa-bottle-water', 'fa-wine-glass', 'fa-beer', 'fa-martini-glass', 'fa-champagne-glasses', 'fa-whiskey-glass', 'fa-blender', 'fa-glass-water-droplet', 'fa-utensils', 'fa-burger', 'fa-pizza-slice', 'fa-hotdog', 'fa-bowl-rice', 'fa-bowl-food', 'fa-bacon', 'fa-drumstick-bite', 'fa-fish', 'fa-shrimp', 'fa-egg', 'fa-cheese', 'fa-bread-slice', 'fa-plate-wheat', 'fa-ice-cream', 'fa-cake-candles', 'fa-cookie', 'fa-candy-cane', 'fa-stroopwafel', 'fa-cookie-bite', 'fa-apple-whole', 'fa-lemon', 'fa-carrot', 'fa-pepper-hot', 'fa-seedling'];
+    const productIcons = ['fa-shopping-basket', 'fa-box', 'fa-jar', 'fa-bottle-droplet', 'fa-soap', 'fa-spray-can-sparkles', 'fa-pills', 'fa-syringe', 'fa-tooth'];
+    const fashionIcons = ['fa-shirt', 'fa-user-tie', 'fa-vest', 'fa-socks', 'fa-glasses', 'fa-hat-cowboy', 'fa-shoe-prints', 'fa-bag-shopping', 'fa-gem', 'fa-ring'];
+    const electronicIcons = ['fa-mobile-screen', 'fa-laptop', 'fa-desktop', 'fa-tablet-screen-button', 'fa-headphones', 'fa-camera', 'fa-tv', 'fa-gamepad', 'fa-keyboard', 'fa-computer-mouse'];
+    const serviceIcons = ['fa-scissors', 'fa-spa', 'fa-dumbbell', 'fa-car', 'fa-motorcycle', 'fa-bicycle', 'fa-gas-pump', 'fa-wrench', 'fa-hammer', 'fa-screwdriver', 'fa-toolbox', 'fa-paint-roller', 'fa-brush'];
+    const healthIcons = ['fa-heart-pulse', 'fa-stethoscope', 'fa-wheelchair', 'fa-baby', 'fa-person-cane'];
+    
+    if (foodIcons.includes(icon)) return 'food';
+    if (productIcons.includes(icon)) return 'product';
+    if (fashionIcons.includes(icon)) return 'fashion';
+    if (electronicIcons.includes(icon)) return 'electronic';
+    if (serviceIcons.includes(icon)) return 'service';
+    if (healthIcons.includes(icon)) return 'health';
+    return 'other';
+  },
+
+  // Filter icons by search
+  filterIcons(searchTerm) {
+    const term = searchTerm.toLowerCase();
+    const icons = document.querySelectorAll('#iconGrid .icon-option');
+    
+    icons.forEach(icon => {
+      const name = icon.getAttribute('data-name');
+      if (name && name.includes(term)) {
+        icon.style.display = '';
+      } else {
+        icon.style.display = 'none';
+      }
+    });
+  },
+
+  // Filter icons by category
+  filterIconsByCategory(category) {
+    const icons = document.querySelectorAll('#iconGrid .icon-option');
+    
+    icons.forEach(icon => {
+      const iconCategory = icon.getAttribute('data-category');
+      if (!category || iconCategory === category) {
+        icon.style.display = '';
+      } else {
+        icon.style.display = 'none';
+      }
+    });
+    
+    // Clear search when category changes
+    const searchInput = document.getElementById('iconSearch');
+    if (searchInput) {
+      searchInput.value = '';
+    }
   },
 };
