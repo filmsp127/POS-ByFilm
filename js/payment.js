@@ -741,6 +741,10 @@ const Payment = {
 
       // Add refund record
       App.state.sales.push(refund);
+      // Update shift if open (เพิ่มโค้ดนี้)
+if (window.ShiftManager && ShiftManager.isShiftOpen()) {
+  ShiftManager.addRefundToShift(refund);
+}
       App.saveData();
 
       // Update member points if applicable
