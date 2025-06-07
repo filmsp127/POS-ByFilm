@@ -22,6 +22,40 @@
 
     <!-- Custom CSS -->
 <style>
+  /* Fix modal footer buttons specifically */
+.modal-footer button {
+  position: relative;
+  z-index: 10;
+  pointer-events: auto !important;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+/* Ensure modal footer is always clickable */
+.modal-footer {
+  position: relative;
+  z-index: 999;
+  pointer-events: auto !important;
+}
+
+/* Fix for Safari mobile */
+@media (max-width: 640px) {
+  .modal-footer {
+    position: sticky !important;
+    bottom: 0 !important;
+    background: white !important;
+  }
+  
+  .modal-footer button {
+    min-height: 48px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+}
   /* Base Styles */
   * {
     font-family: "Kanit", sans-serif;
