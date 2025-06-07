@@ -97,9 +97,9 @@ button, .btn, a.button {
   }
   
   /* ปรับ grid เป็น 1 column บนมือถือ */
-  .grid-cols-2 {
+  /* .grid-cols-2 {
     grid-template-columns: 1fr !important;
-  }
+  } */
   
   /* Table responsive */
   .data-table-wrapper {
@@ -771,13 +771,21 @@ body.modal-open {
   }
 }
   @media (max-width: 640px) {
-    .product-card {
-      padding: 12px;
-    }
+  .product-card {
+    padding: 8px;
+  }
 
-    .product-card .text-5xl {
-      font-size: 2rem;
-    }
+  .product-card .text-5xl {
+    font-size: 1.5rem;
+  }
+  
+  .product-card h4 {
+    font-size: 0.75rem;
+  }
+  
+  .product-card .text-2xl {
+    font-size: 1.25rem;
+  }
 
     .category-tab {
       padding: 8px 16px;
