@@ -879,16 +879,17 @@ body.modal-open {
       <i class="fas fa-bars text-lg sm:text-xl"></i>
     </button>
 
-    <!-- User Button -->
-    <button onclick="App.showUserMenu()" class="user-btn hidden sm:block">
+    <!-- User Button - แก้ไขให้แสดงบนมือถือด้วย -->
+    <button onclick="App.showUserMenu()" class="user-btn">
       <i class="fas fa-user text-lg sm:text-xl"></i>
     </button>
     
-    <!-- Sync Status - ซ่อนบนมือถือ -->
-    <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-white/80 backdrop-filter backdrop-blur-sm rounded-lg text-sm border border-purple-200">
-      <span id="syncStatus"></span>
-      <button onclick="SyncManager.forceSync()" class="text-purple-600 hover:text-purple-700 ml-2" title="Force Sync">
-        <i class="fas fa-sync"></i>
+    <!-- Sync Status - แก้ไขให้แสดงบนมือถือแบบกระชับ -->
+    <div class="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 bg-white/80 backdrop-filter backdrop-blur-sm rounded-lg text-xs sm:text-sm border border-purple-200">
+      <span id="syncStatus" class="hidden sm:inline"></span>
+      <span id="syncStatusIcon" class="sm:hidden"></span>
+      <button onclick="SyncManager.forceSync()" class="text-purple-600 hover:text-purple-700 ml-1 sm:ml-2" title="Force Sync">
+        <i class="fas fa-sync text-sm sm:text-base"></i>
       </button>
     </div>
   </div>
