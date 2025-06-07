@@ -64,106 +64,72 @@ const Utils = {
   },
 
   // Create modal
-createModal(content, options = {}) {
-  const modal = document.createElement("div");
-  modal.className = "fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4";
-  
-  // Check if mobile
-  const isMobile = window.innerWidth <= 640;
-  const sizeClass = options.size || "w-full max-w-md";
-  
-  // Check if content already has close button
-  const hasCloseButton = content.includes('fa-times') || content.includes('modal-close-btn');
-  
-  // Add close button if not exists
-  const closeButton = !hasCloseButton ? `
-    <button onclick="Utils.closeModal(this.closest('.fixed'))" 
-            class="modal-close-btn">
-      <i class="fas fa-times"></i>
-    </button>
-  ` : '';
-  
-  // Check if content has modal structure
-  const hasModalStructure = content.includes('modal-container') || 
-                          content.includes('modal-header') ||
-                          content.includes('modal-with-footer');
-  
-  if (hasModalStructure) {
-    // Content already has proper structure
-    modal.innerHTML = `
-      <div class="bg-white rounded-2xl shadow-2xl ${sizeClass} ${isMobile ? 'modal-content' : ''}">
-        ${content}
-      </div>
-    `;
-  } else {
-    // Wrap content in proper structure
-    modal.innerHTML = `
-      <div class="bg-white rounded-2xl shadow-2xl ${sizeClass} modal-content">
-        <div class="modal-container">
-          <div class="modal-header">
-            <h3 class="text-lg font-semibold text-gray-800">รายละเอียด</h3>
-            ${closeButton}
-          </div>
+  createModal(content, options = {}) {
+    const modal = document.createElement("div");
+    modal.className =
+      "fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4";
+    
+    // Check if mobile
+    const isMobile = window.innerWidth <= 640;
+    const sizeClass = options.size || "w-full max-w-md";
+    
+    // Add mobile fullscreen class if needed
+    const modalClass = isMobile && options.mobileFullscreen !== false 
+      ? `${sizeClass} mobile-fullscreen` 
+      : sizeClass;
+    
+    // Check if content has modal structure
+    const hasModalStructure = content.includes('modal-with-footer') || 
+                            content.includes('modal-body') || 
+                            content.includes('modal-footer');
+    
+    if (hasModalStructure) {
+      // Content already has proper structure
+      modal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-2xl ${modalClass} modal-content">
+          ${content}
+        </div>
+      `;
+    } else {
+      // Wrap content in proper structure
+      modal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-2xl ${modalClass} modal-content modal-with-footer">
           <div class="modal-body">
             ${content}
           </div>
         </div>
-      </div>
-    `;
-  }
-
-  if (options.closeOnClick !== false) {
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) {
-        modal.remove();
-        // Re-enable body scroll
-        if (document.querySelectorAll('.fixed').length === 0) {
-          document.body.classList.remove('modal-open');
-        }
-      }
-    });
-  }
-
-  document.getElementById("modalsContainer").appendChild(modal);
-  
-  // Prevent body scroll on mobile
-  document.body.classList.add('modal-open');
-  
-  // Fix modal positioning on mobile
-  if (isMobile) {
-    modal.style.alignItems = 'flex-end';
-    modal.style.padding = '0';
-    
-    // Ensure content is scrollable
-    const modalBody = modal.querySelector('.modal-body');
-    if (modalBody) {
-      modalBody.style.maxHeight = 'calc(100vh - 150px)';
-      modalBody.style.overflowY = 'auto';
+      `;
     }
+
+    if (options.closeOnClick !== false) {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+          modal.remove();
+        }
+      });
+    }
+
+    document.getElementById("modalsContainer").appendChild(modal);
     
     // Focus management for mobile
-    setTimeout(() => {
-      const firstInput = modal.querySelector('input:not([type="hidden"]), textarea, select');
-      if (firstInput && !firstInput.readOnly) {
-        firstInput.focus();
-      }
-    }, 300);
-  }
-  
-  return modal;
-},
+    if (isMobile) {
+      // Find first input and focus it after a delay
+      setTimeout(() => {
+        const firstInput = modal.querySelector('input:not([type="hidden"]), textarea, select');
+        if (firstInput) {
+          firstInput.focus();
+        }
+      }, 100);
+    }
+    
+    return modal;
+  },
 
   // Close modal
   closeModal(modal) {
     if (modal) {
       modal.style.opacity = "0";
-      setTimeout(() => {
-        modal.remove();
-        // Re-enable body scroll
-        if (document.querySelectorAll('.fixed').length === 0) {
-          document.body.classList.remove('modal-open');
-        }
-      }, 300);
+      setTimeout(() => modal.remove(), 300);
     }
   },
 
