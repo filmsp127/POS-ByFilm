@@ -850,185 +850,193 @@ const ShiftManager = {
   
   // Process close shift
   async processCloseShift(event) {
-    event.preventDefault();
-    
-    const actualCash = parseFloat(document.getElementById('actualCash').value) || 0;
-    const closeNotes = document.getElementById('closingNotes').value.trim();
-    
-    const closedShift = await this.closeShift(actualCash, closeNotes);
-    
-    if (closedShift) {
-      Utils.closeModal(event.target.closest('.fixed'));
-    }
-  },
+  event.preventDefault();
+  
+  const actualCash = parseFloat(document.getElementById('actualCash').value) || 0;
+  const closeNotes = document.getElementById('closingNotes').value.trim();
+  
+  // ปิด modal ก่อน
+  Utils.closeModal(event.target.closest('.fixed'));
+  
+  // แล้วค่อยเรียก closeShift (ซึ่งจะแสดง report อัตโนมัติ)
+  const closedShift = await this.closeShift(actualCash, closeNotes);
+},
   
   // Show close report
   showCloseReport(shift) {
-    const duration = this.getShiftDuration(shift.openTime, shift.closeTime);
-    
-    const content = `
-      <div class="modal-with-footer h-full flex flex-col">
-        <div class="modal-header bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4">
+  const duration = this.getShiftDuration(shift.openTime, shift.closeTime);
+  
+  const content = `
+    <div class="modal-with-footer h-full flex flex-col">
+      <div class="modal-header bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4">
+        <div class="flex items-center justify-between">
           <h3 class="text-lg font-bold">ใบปิดรอบ (Z-Report)</h3>
+          <button onclick="Utils.closeModal(this.closest('.fixed'))" class="w-10 h-10 flex items-center justify-center hover:bg-white/20 rounded-lg transition">
+            <i class="fas fa-times text-xl"></i>
+          </button>
         </div>
-        
-        <div class="modal-body" id="shiftReportContent">
-          <div class="bg-white rounded-lg">
-            <!-- Header -->
-            <div class="text-center border-b pb-4 mb-4">
-              <h2 class="text-xl font-bold text-gray-800">${App.state.settings.storeName || 'SP24 POS'}</h2>
-              <p class="text-sm text-gray-600">ใบปิดรอบการขาย</p>
-              <p class="text-xs text-gray-500 mt-2">รอบที่: ${shift.shiftNumber} | ${new Date(shift.date).toLocaleDateString('th-TH', {year: 'numeric', month: 'long', day: 'numeric'})}</p>
-            </div>
-            
-            <!-- Shift Info -->
-            <div class="bg-gray-50 rounded-lg p-4 mb-4">
-              <h4 class="font-medium text-gray-700 mb-3">ข้อมูลรอบการขาย</h4>
-              <div class="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span class="text-gray-600">พนักงาน:</span>
-                  <p class="font-medium">${shift.employeeName}</p>
-                </div>
-                <div>
-                  <span class="text-gray-600">ระยะเวลา:</span>
-                  <p class="font-medium">${duration}</p>
-                </div>
-                <div>
-                  <span class="text-gray-600">เวลาเปิด:</span>
-                  <p>${new Date(shift.openTime).toLocaleTimeString('th-TH')}</p>
-                </div>
-                <div>
-                  <span class="text-gray-600">เวลาปิด:</span>
-                  <p>${new Date(shift.closeTime).toLocaleTimeString('th-TH')}</p>
-                </div>
+      </div>
+      
+      <div class="modal-body" id="shiftReportContent">
+        <div class="bg-white rounded-lg">
+          <!-- Header -->
+          <div class="text-center border-b pb-4 mb-4">
+            <h2 class="text-xl font-bold text-gray-800">${App.state.settings.storeName || 'SP24 POS'}</h2>
+            <p class="text-sm text-gray-600">ใบปิดรอบการขาย</p>
+            <p class="text-xs text-gray-500 mt-2">รอบที่: ${shift.shiftNumber} | ${new Date(shift.date).toLocaleDateString('th-TH', {year: 'numeric', month: 'long', day: 'numeric'})}</p>
+          </div>
+          
+          <!-- Shift Info -->
+          <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <h4 class="font-medium text-gray-700 mb-3">ข้อมูลรอบการขาย</h4>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span class="text-gray-600">พนักงาน:</span>
+                <p class="font-medium">${shift.employeeName}</p>
               </div>
-            </div>
-            
-            <!-- Sales Summary -->
-            <div class="bg-blue-50 rounded-lg p-4 mb-4">
-              <h4 class="font-medium text-blue-800 mb-3">สรุปยอดขาย</h4>
-              <div class="space-y-2">
-                <div class="flex justify-between">
-                  <span class="text-gray-700">จำนวนบิล:</span>
-                  <span class="font-medium">${shift.sales.bills} บิล</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-700">ยอดขายรวม:</span>
-                  <span class="font-medium text-lg">${Utils.formatCurrency(shift.sales.total)}</span>
-                </div>
-                ${shift.sales.bills > 0 ? `
-                <div class="flex justify-between text-sm text-gray-600">
-                  <span>เฉลี่ยต่อบิล:</span>
-                  <span>${Utils.formatCurrency(shift.sales.total / shift.sales.bills)}</span>
-                </div>
-                ` : ''}
+              <div>
+                <span class="text-gray-600">ระยะเวลา:</span>
+                <p class="font-medium">${duration}</p>
               </div>
-            </div>
-            
-            <!-- Payment Methods -->
-            <div class="bg-green-50 rounded-lg p-4 mb-4">
-              <h4 class="font-medium text-green-800 mb-3">แยกตามการชำระเงิน</h4>
-              <div class="space-y-2">
-                <div class="flex justify-between">
-                  <span class="text-gray-700">เงินสด:</span>
-                  <span class="font-medium">${Utils.formatCurrency(shift.sales.cash)}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-700">โอนเงิน:</span>
-                  <span class="font-medium">${Utils.formatCurrency(shift.sales.transfer)}</span>
-                </div>
-                ${shift.sales.other > 0 ? `
-                <div class="flex justify-between">
-                  <span class="text-gray-700">อื่นๆ:</span>
-                  <span class="font-medium">${Utils.formatCurrency(shift.sales.other)}</span>
-                </div>
-                ` : ''}
+              <div>
+                <span class="text-gray-600">เวลาเปิด:</span>
+                <p>${new Date(shift.openTime).toLocaleTimeString('th-TH')}</p>
               </div>
-            </div>
-            
-            <!-- Cash Movement -->
-            <div class="bg-yellow-50 rounded-lg p-4 mb-4">
-              <h4 class="font-medium text-yellow-800 mb-3">การเคลื่อนไหวเงินสด</h4>
-              <div class="space-y-2">
-                <div class="flex justify-between">
-                  <span class="text-gray-700">เงินสดเริ่มต้น:</span>
-                  <span>${Utils.formatCurrency(shift.openingCash)}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-700">ยอดขายเงินสด:</span>
-                  <span class="text-green-600">+${Utils.formatCurrency(shift.sales.cash)}</span>
-                </div>
-                ${shift.sales.refundAmount > 0 ? `
-                <div class="flex justify-between">
-                  <span class="text-gray-700">คืนเงิน:</span>
-                  <span class="text-red-600">-${Utils.formatCurrency(shift.sales.refundAmount)}</span>
-                </div>
-                ` : ''}
-                <div class="border-t pt-2 mt-2">
-                  <div class="flex justify-between font-medium">
-                    <span>เงินสดที่ควรมี:</span>
-                    <span>${Utils.formatCurrency(shift.expectedCash)}</span>
-                  </div>
-                  <div class="flex justify-between font-medium">
-                    <span>เงินสดที่นับได้:</span>
-                    <span>${Utils.formatCurrency(shift.actualCash)}</span>
-                  </div>
-                  ${shift.difference !== 0 ? `
-                  <div class="flex justify-between font-medium mt-2 ${shift.difference > 0 ? 'text-green-600' : 'text-red-600'}">
-                    <span>ส่วนต่าง:</span>
-                    <span>${shift.difference > 0 ? '+' : ''}${Utils.formatCurrency(shift.difference)}</span>
-                  </div>
-                  ` : ''}
-                </div>
-              </div>
-            </div>
-            
-            <!-- Notes -->
-            ${shift.notes || shift.closeNotes ? `
-            <div class="bg-gray-50 rounded-lg p-4 mb-4">
-              <h4 class="font-medium text-gray-700 mb-2">หมายเหตุ</h4>
-              ${shift.notes ? `<p class="text-sm text-gray-600">เปิดรอบ: ${shift.notes}</p>` : ''}
-              ${shift.closeNotes ? `<p class="text-sm text-gray-600">ปิดรอบ: ${shift.closeNotes}</p>` : ''}
-            </div>
-            ` : ''}
-            
-            <!-- Signature -->
-            <div class="border-t pt-4 mt-6">
-              <div class="grid grid-cols-2 gap-8">
-                <div class="text-center">
-                  <div class="border-b border-gray-400 pb-1 mb-1">
-                    <span class="invisible">ลายเซ็น</span>
-                  </div>
-                  <p class="text-sm text-gray-600">ผู้ปิดรอบ</p>
-                </div>
-                <div class="text-center">
-                  <div class="border-b border-gray-400 pb-1 mb-1">
-                    <span class="invisible">ลายเซ็น</span>
-                  </div>
-                  <p class="text-sm text-gray-600">ผู้ตรวจสอบ</p>
-                </div>
+              <div>
+                <span class="text-gray-600">เวลาปิด:</span>
+                <p>${new Date(shift.closeTime).toLocaleTimeString('th-TH')}</p>
               </div>
             </div>
           </div>
-        </div>
-        
-        <div class="modal-footer">
-          <div class="flex gap-3">
-            <button type="button" onclick="ShiftManager.printShiftReport('${shift.id}')"
-                    class="flex-1 bg-gray-200 hover:bg-gray-300 py-3 rounded-lg text-gray-800 font-medium">
-              <i class="fas fa-print mr-2"></i>พิมพ์
-            </button>
-            <button type="button" onclick="Utils.closeModal(this.closest('.fixed'))"
-                    class="flex-1 bg-purple-500 hover:bg-purple-600 py-3 rounded-lg text-white font-medium">
-              ปิด
-            </button>
+          
+          <!-- Sales Summary -->
+          <div class="bg-blue-50 rounded-lg p-4 mb-4">
+            <h4 class="font-medium text-blue-800 mb-3">สรุปยอดขาย</h4>
+            <div class="space-y-2">
+              <div class="flex justify-between">
+                <span class="text-gray-700">จำนวนบิล:</span>
+                <span class="font-medium">${shift.sales.bills} บิล</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-700">ยอดขายรวม:</span>
+                <span class="font-medium text-lg">${Utils.formatCurrency(shift.sales.total)}</span>
+              </div>
+              ${shift.sales.bills > 0 ? `
+              <div class="flex justify-between text-sm text-gray-600">
+                <span>เฉลี่ยต่อบิล:</span>
+                <span>${Utils.formatCurrency(shift.sales.total / shift.sales.bills)}</span>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+          
+          <!-- Payment Methods -->
+          <div class="bg-green-50 rounded-lg p-4 mb-4">
+            <h4 class="font-medium text-green-800 mb-3">แยกตามการชำระเงิน</h4>
+            <div class="space-y-2">
+              <div class="flex justify-between">
+                <span class="text-gray-700">เงินสด:</span>
+                <span class="font-medium">${Utils.formatCurrency(shift.sales.cash)}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-700">โอนเงิน:</span>
+                <span class="font-medium">${Utils.formatCurrency(shift.sales.transfer)}</span>
+              </div>
+              ${shift.sales.other > 0 ? `
+              <div class="flex justify-between">
+                <span class="text-gray-700">อื่นๆ:</span>
+                <span class="font-medium">${Utils.formatCurrency(shift.sales.other)}</span>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+          
+          <!-- Cash Movement -->
+          <div class="bg-yellow-50 rounded-lg p-4 mb-4">
+            <h4 class="font-medium text-yellow-800 mb-3">การเคลื่อนไหวเงินสด</h4>
+            <div class="space-y-2">
+              <div class="flex justify-between">
+                <span class="text-gray-700">เงินสดเริ่มต้น:</span>
+                <span>${Utils.formatCurrency(shift.openingCash)}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-700">ยอดขายเงินสด:</span>
+                <span class="text-green-600">+${Utils.formatCurrency(shift.sales.cash)}</span>
+              </div>
+              ${shift.sales.refundAmount > 0 ? `
+              <div class="flex justify-between">
+                <span class="text-gray-700">คืนเงิน:</span>
+                <span class="text-red-600">-${Utils.formatCurrency(shift.sales.refundAmount)}</span>
+              </div>
+              ` : ''}
+              <div class="border-t pt-2 mt-2">
+                <div class="flex justify-between font-medium">
+                  <span>เงินสดที่ควรมี:</span>
+                  <span>${Utils.formatCurrency(shift.expectedCash)}</span>
+                </div>
+                <div class="flex justify-between font-medium">
+                  <span>เงินสดที่นับได้:</span>
+                  <span>${Utils.formatCurrency(shift.actualCash)}</span>
+                </div>
+                ${shift.difference !== 0 ? `
+                <div class="flex justify-between font-medium mt-2 ${shift.difference > 0 ? 'text-green-600' : 'text-red-600'}">
+                  <span>ส่วนต่าง:</span>
+                  <span>${shift.difference > 0 ? '+' : ''}${Utils.formatCurrency(shift.difference)}</span>
+                </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+          
+          <!-- Notes -->
+          ${shift.notes || shift.closeNotes ? `
+          <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <h4 class="font-medium text-gray-700 mb-2">หมายเหตุ</h4>
+            ${shift.notes ? `<p class="text-sm text-gray-600">เปิดรอบ: ${shift.notes}</p>` : ''}
+            ${shift.closeNotes ? `<p class="text-sm text-gray-600">ปิดรอบ: ${shift.closeNotes}</p>` : ''}
+          </div>
+          ` : ''}
+          
+          <!-- Signature -->
+          <div class="border-t pt-4 mt-6">
+            <div class="grid grid-cols-2 gap-8">
+              <div class="text-center">
+                <div class="border-b border-gray-400 pb-1 mb-1">
+                  <span class="invisible">ลายเซ็น</span>
+                </div>
+                <p class="text-sm text-gray-600">ผู้ปิดรอบ</p>
+              </div>
+              <div class="text-center">
+                <div class="border-b border-gray-400 pb-1 mb-1">
+                  <span class="invisible">ลายเซ็น</span>
+                </div>
+                <p class="text-sm text-gray-600">ผู้ตรวจสอบ</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    `;
-    
+      
+      <div class="modal-footer">
+        <div class="flex gap-3">
+          <button type="button" onclick="ShiftManager.printShiftReport('${shift.id}')"
+                  class="flex-1 bg-gray-200 hover:bg-gray-300 py-3 rounded-lg text-gray-800 font-medium">
+            <i class="fas fa-print mr-2"></i>พิมพ์
+          </button>
+          <button type="button" onclick="Utils.closeModal(this.closest('.fixed'))"
+                  class="flex-1 bg-purple-500 hover:bg-purple-600 py-3 rounded-lg text-white font-medium">
+            ปิด
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // เพิ่ม delay เล็กน้อยเพื่อให้ UI update ก่อน
+  setTimeout(() => {
     Utils.createModal(content, { size: 'w-full max-w-md', mobileFullscreen: true });
-  },
+  }, 100);
+},
   
   // Print shift report
   printShiftReport(shiftId) {
