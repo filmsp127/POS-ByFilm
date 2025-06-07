@@ -233,19 +233,26 @@ const Cart = {
   },
 
   createCartPanel() {
-  // ตรวจสอบว่ามี modalsContainer หรือไม่
-  const container = document.getElementById("modalsContainer");
-  if (!container) {
-    console.error("modalsContainer not found!");
-    // สร้าง container ถ้าไม่มี
-    const newContainer = document.createElement("div");
-    newContainer.id = "modalsContainer";
-    document.body.appendChild(newContainer);
+  // ตรวจสอบว่ามี panel อยู่แล้วหรือไม่
+  if (document.getElementById("cartPanel")) {
+    console.log("Cart panel already exists");
+    return;
   }
-    const panel = document.createElement("div");
-    panel.id = "cartPanel";
-    panel.className = "fixed inset-0 z-40 hidden";
-    panel.innerHTML = `
+  
+  // ตรวจสอบว่ามี modalsContainer หรือไม่
+  let container = document.getElementById("modalsContainer");
+  if (!container) {
+    console.error("modalsContainer not found! Creating...");
+    container = document.createElement("div");
+    container.id = "modalsContainer";
+    document.body.appendChild(container);
+  }
+  
+  const panel = document.createElement("div");
+  panel.id = "cartPanel";
+  panel.className = "fixed inset-0 z-40 hidden";
+  
+  // ใส่ HTML content ตามเดิม...
       <div class="absolute inset-0 bg-black/50" onclick="Cart.close()"></div>
       <div class="cart-panel-content absolute right-0 top-0 h-full w-full sm:w-96 max-w-full bg-white shadow-2xl flex flex-col">
         <!-- Cart Header -->
