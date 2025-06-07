@@ -64,66 +64,73 @@ const Utils = {
   },
 
   // Create modal
-  createModal(content, options = {}) {
-    const modal = document.createElement("div");
-    modal.className =
-      "fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4";
-    
-    // Check if mobile
-    const isMobile = window.innerWidth <= 640;
-    const sizeClass = options.size || "w-full max-w-md";
-    
-    // Add mobile fullscreen class if needed
-    const modalClass = isMobile && options.mobileFullscreen !== false 
-      ? `${sizeClass} mobile-fullscreen` 
-      : sizeClass;
-    
-    // Check if content has modal structure
-    const hasModalStructure = content.includes('modal-with-footer') || 
-                            content.includes('modal-body') || 
-                            content.includes('modal-footer');
-    
-    if (hasModalStructure) {
-      // Content already has proper structure
-      modal.innerHTML = `
-        <div class="bg-white rounded-xl shadow-2xl ${modalClass} modal-content">
+createModal(content, options = {}) {
+  const modal = document.createElement("div");
+  modal.className = "fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4";
+  
+  // Check if mobile
+  const isMobile = window.innerWidth <= 640;
+  const sizeClass = options.size || "w-full max-w-md";
+  
+  // Check if content already has close button
+  const hasCloseButton = content.includes('fa-times') || content.includes('modal-close-btn');
+  
+  // Add close button if not exists
+  const closeButton = !hasCloseButton ? `
+    <button onclick="Utils.closeModal(this.closest('.fixed'))" 
+            class="modal-close-btn">
+      <i class="fas fa-times"></i>
+    </button>
+  ` : '';
+  
+  // Check if content has modal structure
+  const hasModalStructure = content.includes('modal-container') || 
+                          content.includes('modal-header');
+  
+  if (hasModalStructure) {
+    // Content already has proper structure
+    modal.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-2xl ${sizeClass} ${isMobile ? 'mobile-fullscreen' : ''}">
+        ${content}
+      </div>
+    `;
+  } else {
+    // Wrap content in proper structure
+    modal.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-2xl ${sizeClass} modal-container ${isMobile ? 'mobile-fullscreen' : ''}">
+        <div class="modal-header">
+          <h3 class="text-lg font-semibold text-gray-800">รายละเอียด</h3>
+          ${closeButton}
+        </div>
+        <div class="modal-body">
           ${content}
         </div>
-      `;
-    } else {
-      // Wrap content in proper structure
-      modal.innerHTML = `
-        <div class="bg-white rounded-xl shadow-2xl ${modalClass} modal-content modal-with-footer">
-          <div class="modal-body">
-            ${content}
-          </div>
-        </div>
-      `;
-    }
+      </div>
+    `;
+  }
 
-    if (options.closeOnClick !== false) {
-      modal.addEventListener("click", (e) => {
-        if (e.target === modal) {
-          modal.remove();
-        }
-      });
-    }
+  if (options.closeOnClick !== false) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
+  }
 
-    document.getElementById("modalsContainer").appendChild(modal);
-    
-    // Focus management for mobile
-    if (isMobile) {
-      // Find first input and focus it after a delay
-      setTimeout(() => {
-        const firstInput = modal.querySelector('input:not([type="hidden"]), textarea, select');
-        if (firstInput) {
-          firstInput.focus();
-        }
-      }, 100);
-    }
-    
-    return modal;
-  },
+  document.getElementById("modalsContainer").appendChild(modal);
+  
+  // Focus management for mobile
+  if (isMobile) {
+    setTimeout(() => {
+      const firstInput = modal.querySelector('input:not([type="hidden"]), textarea, select');
+      if (firstInput) {
+        firstInput.focus();
+      }
+    }, 100);
+  }
+  
+  return modal;
+},
 
   // Close modal
   closeModal(modal) {
