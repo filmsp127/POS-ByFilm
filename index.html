@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    />
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
+/>
     <meta name="theme-color" content="#6366f1" />
     <title>SP24 POS - ระบบขายหน้าร้าน</title>
 
@@ -42,10 +42,73 @@
 body {
   height: 100vh;
   height: -webkit-fill-available;
+  /* Safari specific fixes */
+  -webkit-overflow-scrolling: touch;
+  -webkit-appearance: none;
 }
 
 html {
   height: -webkit-fill-available;
+  /* Safari status bar fix */
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Safari specific modal fixes */
+@supports (-webkit-touch-callout: none) {
+  .modal-footer {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 999 !important;
+    /* Force hardware acceleration */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    /* Enable touch events */
+    -webkit-touch-callout: default;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    pointer-events: auto !important;
+  }
+  
+  .modal-footer button {
+    /* Ensure buttons are clickable */
+    pointer-events: auto !important;
+    -webkit-touch-callout: default;
+    touch-action: manipulation;
+    /* Minimum touch target size */
+    min-height: 48px !important;
+    min-width: 48px !important;
+  }
+}
+
+/* Fix modal container height for Safari */
+@media (max-width: 640px) {
+  .modal-with-footer {
+    height: 100vh !important;
+    height: -webkit-fill-available !important;
+    max-height: 100vh !important;
+    max-height: -webkit-fill-available !important;
+    /* Remove any transforms that might interfere */
+    -webkit-transform: none !important;
+    transform: none !important;
+  }
+  
+  /* Ensure modal footer is always on top and clickable */
+  .modal-footer {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 999 !important;
+    background: white !important;
+    border-top: 1px solid #e5e7eb !important;
+    padding: 1rem !important;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 20px)) !important;
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+    pointer-events: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
 }
   
   /* Mobile Modal Fixes */
