@@ -95,11 +95,17 @@ button, .btn, a.button {
 }
 
 /* Fix modal on mobile */
+/* โค้ดใหม่ที่แก้ไขแล้ว */
 @media (max-width: 640px) {
   #authModal > div {
     max-height: 100vh;
     height: 100vh;
     border-radius: 0;
+    /* --- เพิ่ม 4 บรรทัดนี้เข้าไป --- */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1rem; /* เพิ่ม padding เพื่อไม่ให้ชิดขอบจอเกินไป */
   }
   
   #authModal .overflow-y-auto {
