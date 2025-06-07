@@ -95,27 +95,40 @@ button, .btn, a.button {
 }
 
 /* Fix modal on mobile */
-/* โค้ดใหม่ที่แก้ไขแล้ว */
+/* โค้ดใหม่สำหรับจัดหน้า Login และ Signup บนมือถือ */
 @media (max-width: 640px) {
-  #authModal > div {
-    max-height: 100vh;
-    height: 100vh;
-    border-radius: 0;
-    /* --- เพิ่ม 4 บรรทัดนี้เข้าไป --- */
+  /* 1. ทำให้พื้นหลัง modal (#authModal) เป็น flex container 
+        เพื่อจัดตำแหน่งกล่องเนื้อหาให้อยู่ตรงกลางเสมอ 
+  */
+  #authModal {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 1rem; /* เพิ่ม padding เพื่อไม่ให้ชิดขอบจอเกินไป */
+    align-items: center;    /* จัดให้อยู่กลางแนวตั้ง */
+    justify-content: center; /* จัดให้อยู่กลางแนวนอน */
+    padding: 1rem;           /* มีระยะห่างจากขอบจอ */
+  }
+
+  /* 2. กำหนดสไตล์ให้เฉพาะหน้า Login (กล่องลอยขอบมน)
+        เราใช้ .login-view ที่เพิ่มจาก JS มาช่วย
+  */
+  #authModal.login-view > div {
+    height: auto;           /* ความสูงอัตโนมัติตามเนื้อหา */
+    max-height: 90vh;       /* สูงสุดไม่เกิน 90% ของจอ */
+    width: 100%;
+    border-radius: 1.5rem;  /* ทำให้ขอบโค้งมนสวยงาม */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* เพิ่มเงาให้ดูมีมิติ */
+  }
+
+  /* 3. กำหนดสไตล์ให้หน้า Signup (เต็มจอเหมือนเดิม)
+        เราใช้ .signup-view ที่เพิ่มจาก JS มาช่วย
+  */
+  #authModal.signup-view > div {
+    height: 100%;      /* สูงเต็ม 100% ของจอ */
+    max-height: 100%;
+    width: 100%;
+    border-radius: 0;   /* ไม่มีขอบมน */
   }
   
-  #authModal .overflow-y-auto {
-    max-height: 100vh;
-    padding-bottom: 4rem; /* เพิ่มพื้นที่ด้านล่างสำหรับมือถือ */
-  }
-}
-
-/* Input fields บนมือถือ */
-@media (max-width: 640px) {
+  /* Input fields บนมือถือ (โค้ดส่วนนี้อาจมีอยู่แล้ว ให้คงไว้) */
   input[type="text"],
   input[type="number"],
   input[type="email"],
@@ -126,11 +139,7 @@ button, .btn, a.button {
     font-size: 16px !important; /* ป้องกัน iOS zoom */
     padding: 12px !important;
   }
-  
-  /* ปรับ grid เป็น 1 column บนมือถือ */
-  /* .grid-cols-2 {
-    grid-template-columns: 1fr !important;
-  } */
+
   
   /* Table responsive */
   .data-table-wrapper {
