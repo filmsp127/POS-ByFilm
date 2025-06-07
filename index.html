@@ -82,6 +82,31 @@ button, .btn, a.button {
   min-height: 44px;
   min-width: 44px;
 }
+  /* Fix for auth modal scrolling */
+#authModal .overflow-y-auto {
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure forms are fully visible */
+#loginForm, #signupForm {
+  padding-bottom: 2rem;
+}
+
+/* Fix modal on mobile */
+@media (max-width: 640px) {
+  #authModal > div {
+    max-height: 100vh;
+    height: 100vh;
+    border-radius: 0;
+  }
+  
+  #authModal .overflow-y-auto {
+    max-height: 100vh;
+    padding-bottom: 4rem; /* เพิ่มพื้นที่ด้านล่างสำหรับมือถือ */
+  }
+}
 
 /* Input fields บนมือถือ */
 @media (max-width: 640px) {
