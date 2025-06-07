@@ -1076,6 +1076,35 @@ body.modal-open {
   .payment-method:hover::after {
     opacity: 1;
   }
+  /* Safari status bar และ notch fix */
+@supports (padding: env(safe-area-inset-top)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .fixed.inset-0 {
+    top: env(safe-area-inset-top);
+    height: calc(100vh - env(safe-area-inset-top));
+  }
+}
+
+/* Hide Safari bottom home indicator overlay */
+@media (max-width: 640px) {
+  html {
+    /* Hide the home indicator */
+    -webkit-appearance: none;
+  }
+  
+  /* Ensure content doesn't go behind notch/status bar */
+  .top-bar {
+    padding-top: max(env(safe-area-inset-top), 1rem);
+  }
+  
+  /* Fix for modal overlaying system UI */
+  .fixed.z-50 {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+}
 </style>
     </style>
   </head>
