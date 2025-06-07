@@ -270,30 +270,62 @@ const SyncManager = {
   },
 
   // Get sync status display
-  getSyncStatusDisplay() {
-    if (!this.syncStatus.isOnline) {
-      return '<span class="text-red-500"><i class="fas fa-wifi-slash"></i> ออฟไลน์</span>';
+getSyncStatusDisplay() {
+  const fullStatus = this.getFullSyncStatus();
+  const iconStatus = this.getSyncStatusIcon();
+  
+  // Update both elements
+  const statusEl = document.getElementById('syncStatus');
+  const iconEl = document.getElementById('syncStatusIcon');
+  
+  if (statusEl) statusEl.innerHTML = fullStatus;
+  if (iconEl) iconEl.innerHTML = iconStatus;
+  
+  return fullStatus;
+},
+
+// Get full status text
+getFullSyncStatus() {
+  if (!this.syncStatus.isOnline) {
+    return '<span class="text-red-500"><i class="fas fa-wifi-slash"></i> ออฟไลน์</span>';
+  }
+  
+  if (this.syncStatus.isSyncing) {
+    return '<span class="text-blue-500"><i class="fas fa-sync fa-spin"></i> กำลัง sync...</span>';
+  }
+  
+  if (this.syncStatus.pendingSync.length > 0) {
+    return `<span class="text-yellow-500"><i class="fas fa-exclamation-triangle"></i> รอ sync ${this.syncStatus.pendingSync.length} รายการ</span>`;
+  }
+  
+  if (this.syncStatus.lastSync) {
+    const minutesAgo = Math.floor((Date.now() - this.syncStatus.lastSync) / 60000);
+    if (minutesAgo < 1) {
+      return '<span class="text-green-500"><i class="fas fa-check-circle"></i> ซิงค์แล้ว</span>';
+    } else {
+      return `<span class="text-green-500"><i class="fas fa-check-circle"></i> ซิงค์เมื่อ ${minutesAgo} นาทีที่แล้ว</span>`;
     }
-    
-    if (this.syncStatus.isSyncing) {
-      return '<span class="text-blue-500"><i class="fas fa-sync fa-spin"></i> กำลัง sync...</span>';
-    }
-    
-    if (this.syncStatus.pendingSync.length > 0) {
-      return `<span class="text-yellow-500"><i class="fas fa-exclamation-triangle"></i> รอ sync ${this.syncStatus.pendingSync.length} รายการ</span>`;
-    }
-    
-    if (this.syncStatus.lastSync) {
-      const minutesAgo = Math.floor((Date.now() - this.syncStatus.lastSync) / 60000);
-      if (minutesAgo < 1) {
-        return '<span class="text-green-500"><i class="fas fa-check-circle"></i> ซิงค์แล้ว</span>';
-      } else {
-        return `<span class="text-green-500"><i class="fas fa-check-circle"></i> ซิงค์เมื่อ ${minutesAgo} นาทีที่แล้ว</span>`;
-      }
-    }
-    
-    return '<span class="text-green-500"><i class="fas fa-check-circle"></i> ออนไลน์</span>';
-  },
+  }
+  
+  return '<span class="text-green-500"><i class="fas fa-check-circle"></i> ออนไลน์</span>';
+},
+
+// Get icon only for mobile
+getSyncStatusIcon() {
+  if (!this.syncStatus.isOnline) {
+    return '<i class="fas fa-wifi-slash text-red-500"></i>';
+  }
+  
+  if (this.syncStatus.isSyncing) {
+    return '<i class="fas fa-sync fa-spin text-blue-500"></i>';
+  }
+  
+  if (this.syncStatus.pendingSync.length > 0) {
+    return `<i class="fas fa-exclamation-triangle text-yellow-500"></i>`;
+  }
+  
+  return '<i class="fas fa-check-circle text-green-500"></i>';
+},
 
   // Queue operation for sync
   queueOperation(type, data) {
