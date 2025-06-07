@@ -775,32 +775,7 @@ setInterval(() => {
         }
       });
     this.unsubscribers.push(salesUnsub);
-  // Listen to shifts changes
-const shiftsUnsub = storeRef
-  .collection("shifts")
-  .where("status", "==", "open") // ดูเฉพาะรอบที่เปิดอยู่
-  .onSnapshot((snapshot) => {
-    // Clear current shifts
-    const openShifts = [];
-    
-    snapshot.forEach((doc) => {
-      const shift = { id: doc.id, ...doc.data() };
-      openShifts.push(shift);
-    });
-    
-    // Update ShiftManager with latest open shift
-    if (window.ShiftManager) {
-      if (openShifts.length > 0) {
-        // มีรอบที่เปิดอยู่
-        const latestShift = openShifts[0];
-        ShiftManager.updateFromFirebase(latestShift);
-      } else {
-        // ไม่มีรอบที่เปิด
-        ShiftManager.clearCurrentShift();
-      }
-    }
-  });
-this.unsubscribers.push(shiftsUnsub);
+
     // Listen to store info changes
     const storeUnsub = storeRef.onSnapshot((doc) => {
       if (doc.exists) {
