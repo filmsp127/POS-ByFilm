@@ -863,15 +863,23 @@ const BackOffice = {
       const tr = document.createElement("tr");
       tr.className = "hover:bg-gray-50";
       tr.innerHTML = `
-        <td class="p-3" data-label="รูป">...</td>
-    <td class="p-3 text-gray-800" style="max-width: 200px;" data-label="ชื่อสินค้า">...</td>
-    <td class="p-3 text-center" data-label="หมวดหมู่">...</td>
-    <td class="p-3 text-right text-gray-700" data-label="ต้นทุน">${Utils.formatCurrency(product.cost || 0)}</td>
-    <td class="p-3 text-right text-gray-800 font-medium" data-label="ราคาขาย">${Utils.formatCurrency(product.price)}</td>
-    <td class="p-3 text-right" data-label="กำไร">...</td>
-    <td class="p-3 text-right" data-label="สต็อค">...</td>
-    <td class="p-3 text-center" style="min-width: 120px;" data-label="จัดการ">...</td>
-`;
+        <td class="p-3">
+          ${
+            product.imageType === "url"
+              ? `<img src="${product.image}" alt="${product.name}" class="w-12 h-12 rounded object-cover">`
+              : `<div class="text-2xl w-12 h-12 flex items-center justify-center">${
+                  product.image || "📦"
+                }</div>`
+          }
+        </td>
+        <td class="p-3 text-gray-800" style="max-width: 200px;">
+          <div class="font-medium truncate">${product.name}</div>
+          ${
+            product.code
+              ? `<div class="text-xs text-gray-500">${product.code}</div>`
+              : ""
+          }
+        </td>
         <td class="p-3 text-center">
           <span class="px-2 py-1 rounded-full text-xs ${
             category?.id === 2
