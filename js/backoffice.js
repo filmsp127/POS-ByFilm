@@ -536,32 +536,47 @@ const BackOffice = {
 
   // Sales History Page
   createSalesPage() {
-    return `
-            <div class="min-h-screen p-4">
-                <!-- Header -->
-                <div class="bg-white shadow-md rounded-lg mb-6 p-4 flex items-center justify-between">
-                    <div class="flex items-center gap-4">
-                        <button onclick="BackOffice.closePage()" class="text-gray-700 hover:text-gray-900">
-                            <i class="fas fa-arrow-left text-xl"></i>
-                        </button>
-                        <h1 class="text-2xl font-bold text-gray-800">ประวัติการขาย</h1>
-                    </div>
-                    <div class="flex gap-2">
-                        <input type="date" id="salesDateFilter" class="p-2 rounded-lg border border-gray-300 text-gray-800">
-                        <button onclick="BackOffice.filterSalesByDate()" class="btn-primary px-4 py-2 rounded-lg text-white">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </div>
+  return `
+    <div class="min-h-screen p-4">
+      <!-- Header -->
+      <div class="bg-white shadow-md rounded-lg mb-6 p-4 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <button onclick="BackOffice.closePage()" class="text-gray-700 hover:text-gray-900">
+            <i class="fas fa-arrow-left text-xl"></i>
+          </button>
+          <h1 class="text-2xl font-bold text-gray-800">ประวัติการขาย</h1>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="BackOffice.refreshSales()" class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg text-white">
+            <i class="fas fa-sync"></i> รีเฟรช
+          </button>
+          <input type="date" id="salesDateFilter" class="p-2 rounded-lg border border-gray-300 text-gray-800">
+          <button onclick="BackOffice.filterSalesByDate()" class="btn-primary px-4 py-2 rounded-lg text-white">
+            <i class="fas fa-search"></i>
+          </button>
+        </div>
+      </div>
 
-                <!-- Sales List -->
-                <div class="space-y-3" id="salesList">
-                    <!-- Sales items will be loaded here -->
-                </div>
-            </div>
-        `;
-  },
+      <!-- Sales List -->
+      <div class="space-y-3" id="salesList">
+        <!-- Sales items will be loaded here -->
+      </div>
+    </div>
+  `;
+},
 
+// เพิ่มฟังก์ชัน refresh sales
+async refreshSales() {
+  Utils.showLoading("กำลังโหลดข้อมูล...");
+  const success = await App.forceSyncSales();
+  Utils.hideLoading();
+  
+  if (success) {
+    Utils.showToast("โหลดข้อมูลสำเร็จ", "success");
+  } else {
+    Utils.showToast("ไม่สามารถโหลดข้อมูลได้", "error");
+  }
+},
   // Reports Page
   createReportsPage() {
     return `
