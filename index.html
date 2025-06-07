@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <meta name="theme-color" content="#6366f1" />
     <title>SP24 POS - ระบบขายหน้าร้าน</title>
@@ -38,35 +38,11 @@
     width: 100%;
     height: 100%;
   }
-  /* Fix viewport height สำหรับมือถือ */
-body {
-  height: 100vh;
-  height: -webkit-fill-available;
-}
-
-html {
-  height: -webkit-fill-available;
-}
   
   /* Mobile Modal Fixes */
   .fixed {
     -webkit-overflow-scrolling: touch;
   }
-  /* Fix for modal on mobile viewport */
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .modal-with-footer {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-}
-
-/* Ensure modals are properly contained */
-#modalsContainer {
-  pointer-events: none;
-}
-
-#modalsContainer > * {
-  pointer-events: auto;
-}
 
   /* Modal Container - ปรับปรุงสำหรับมือถือ */
   /* Modal Header สำหรับทุก modal */
@@ -113,25 +89,6 @@ html {
 }
 
 /* Modal Footer ที่ติดด้านล่าง */
-/* Modal with Sticky Footer */
-.modal-with-footer {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-}
-
-/* Modal Body ที่ scroll ได้ */
-.modal-body {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 1.5rem;
-  /* เพิ่ม padding bottom สำหรับ iOS */
-  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
-}
-
-/* Modal Footer ที่ติดด้านล่าง */
 .modal-footer {
   flex-shrink: 0;
   background: linear-gradient(to top, rgba(255,255,255,1), rgba(255,255,255,0.95));
@@ -143,21 +100,6 @@ html {
   box-shadow: 0 -2px 15px rgba(99, 102, 241, 0.1);
   /* Safe area for iPhone */
   padding-bottom: calc(1rem + env(safe-area-inset-bottom));
-}
-
-/* Fix modal container height */
-@media (max-width: 640px) {
-  .modal-with-footer {
-    max-height: 100vh;
-    height: 100%;
-  }
-  
-  /* Ensure modal content doesn't overflow */
-  .fixed > div > div {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
 }
 
 /* Touch targets ขนาดใหญ่ขึ้น */
