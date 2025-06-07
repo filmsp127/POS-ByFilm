@@ -939,55 +939,45 @@ setInterval(() => {
   },
 
    async saveData(skipFirebaseSync = false) {
-     console.log("💾 saveData called, skipFirebaseSync:", skipFirebaseSync);
-    console.log("Products to save:", this.state.products);
-    try {
-      const storeId = this.state.currentStoreId;
-      if (!storeId) {
-        console.error("Cannot save data: No store ID");
-        return;
-      }
-
-      // Save to localStorage first for offline support
-      const storageKey = `posData_${storeId}`;
-      localStorage.setItem(storageKey, JSON.stringify(this.state));
-      console.log("💾 Data saved locally for store:", storeId);
-
-      // Only sync to Firebase if not skipped and authenticated
-      if (!skipFirebaseSync && window.FirebaseService && FirebaseService.isAuthenticated()) {
-        // Debounce Firebase sync to prevent rapid firing
-        if (this.syncTimeout) {
-          clearTimeout(this.syncTimeout);
-        }
-        
-        this.syncTimeout = setTimeout(() => {
-          this.syncWithFirebase().then(() => {
-            console.log("☁️ Data synced to cloud");
-          }).catch(error => {
-            console.error("❌ Failed to sync to cloud:", error);
-            Utils.showToast("ไม่สามารถซิงค์ข้อมูลได้ กรุณาตรวจสอบการเชื่อมต่อ", "warning");
-          });
-        }, 2000); // Wait 2 seconds before syncing
-      }
-    } catch (error) {
-      console.error("❌ Error saving data:", error);
-
-      // Try to save critical data only
-      try {
-        const criticalData = {
-          sales: this.state.sales.slice(-100), // Last 100 sales
-          members: this.state.members,
-          currentStoreId: this.state.currentStoreId,
-        };
-        const storageKey = `posDataCritical_${this.state.currentStoreId}`;
-        localStorage.setItem(storageKey, JSON.stringify(criticalData));
-        console.log("💾 Critical data saved");
-      } catch (e) {
-        console.error("❌ Failed to save critical data:", e);
-      }
+  console.log("💾 saveData called, skipFirebaseSync:", skipFirebaseSync);
+  console.log("Products to save:", this.state.products);
+  
+  try {
+    const storeId = this.state.currentStoreId;
+    if (!storeId) {
+      console.error("Cannot save data: No store ID");
+      return;
     }
-  },
 
+    // Save to localStorage first
+    const storageKey = `posData_${storeId}`;
+    localStorage.setItem(storageKey, JSON.stringify(this.state));
+    console.log("💾 Data saved locally for store:", storeId);
+
+    // Only sync to Firebase if not skipped and authenticated
+    if (!skipFirebaseSync && window.FirebaseService && FirebaseService.isAuthenticated()) {
+      // Clear existing timeout
+      if (this.syncTimeout) {
+        clearTimeout(this.syncTimeout);
+      }
+      
+      // Debounce Firebase sync - เพิ่มเวลา delay
+      this.syncTimeout = setTimeout(() => {
+        this.syncWithFirebase().then(() => {
+          console.log("☁️ Data synced to cloud");
+        }).catch(error => {
+          console.error("❌ Failed to sync to cloud:", error);
+          // ไม่แสดง toast ทุกครั้งที่ sync fail
+          if (error.code !== 'resource-exhausted') {
+            Utils.showToast("ไม่สามารถซิงค์ข้อมูลได้ กรุณาตรวจสอบการเชื่อมต่อ", "warning");
+          }
+        });
+      }, 5000); // เพิ่มเป็น 5 วินาที
+    }
+  } catch (error) {
+    console.error("❌ Error saving data:", error);
+  }
+},
   addSale(sale) {
     try {
       sale.id = Date.now();
