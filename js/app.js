@@ -37,6 +37,56 @@ const App = {
   unsubscribers: [],
   syncTimeout: null,
 
+  // Rate limiting properties
+rateLimitQueue: [],
+isProcessingQueue: false,
+lastBatchTime: 0,
+BATCH_DELAY: 2000, // 2 seconds between batches
+
+// Process rate limited queue
+async processRateLimitQueue() {
+  if (this.isProcessingQueue || this.rateLimitQueue.length === 0) {
+    return;
+  }
+
+  this.isProcessingQueue = true;
+  
+  // Wait if last batch was too recent
+  const timeSinceLastBatch = Date.now() - this.lastBatchTime;
+  if (timeSinceLastBatch < this.BATCH_DELAY) {
+    await new Promise(resolve => 
+      setTimeout(resolve, this.BATCH_DELAY - timeSinceLastBatch)
+    );
+  }
+
+  try {
+    const batch = this.rateLimitQueue.splice(0, 5); // Process 5 items at a time
+    
+    for (const item of batch) {
+      try {
+        await item.operation();
+      } catch (error) {
+        console.error("Queue operation failed:", error);
+      }
+    }
+    
+    this.lastBatchTime = Date.now();
+  } finally {
+    this.isProcessingQueue = false;
+    
+    // Process next batch if any
+    if (this.rateLimitQueue.length > 0) {
+      setTimeout(() => this.processRateLimitQueue(), this.BATCH_DELAY);
+    }
+  }
+},
+
+// Add operation to queue
+queueOperation(operation) {
+  this.rateLimitQueue.push({ operation });
+  this.processRateLimitQueue();
+},
+
   // Initialize application
   init() {
     console.log("🚀 Initializing POS System...");
