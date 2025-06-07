@@ -85,25 +85,28 @@ createModal(content, options = {}) {
   
   // Check if content has modal structure
   const hasModalStructure = content.includes('modal-container') || 
-                          content.includes('modal-header');
+                          content.includes('modal-header') ||
+                          content.includes('modal-with-footer');
   
   if (hasModalStructure) {
     // Content already has proper structure
     modal.innerHTML = `
-      <div class="bg-white rounded-2xl shadow-2xl ${sizeClass} ${isMobile ? 'mobile-fullscreen' : ''}">
+      <div class="bg-white rounded-2xl shadow-2xl ${sizeClass} ${isMobile ? 'modal-content' : ''}">
         ${content}
       </div>
     `;
   } else {
     // Wrap content in proper structure
     modal.innerHTML = `
-      <div class="bg-white rounded-2xl shadow-2xl ${sizeClass} modal-container ${isMobile ? 'mobile-fullscreen' : ''}">
-        <div class="modal-header">
-          <h3 class="text-lg font-semibold text-gray-800">รายละเอียด</h3>
-          ${closeButton}
-        </div>
-        <div class="modal-body">
-          ${content}
+      <div class="bg-white rounded-2xl shadow-2xl ${sizeClass} modal-content">
+        <div class="modal-container">
+          <div class="modal-header">
+            <h3 class="text-lg font-semibold text-gray-800">รายละเอียด</h3>
+            ${closeButton}
+          </div>
+          <div class="modal-body">
+            ${content}
+          </div>
         </div>
       </div>
     `;
@@ -113,20 +116,38 @@ createModal(content, options = {}) {
     modal.addEventListener("click", (e) => {
       if (e.target === modal) {
         modal.remove();
+        // Re-enable body scroll
+        if (document.querySelectorAll('.fixed').length === 0) {
+          document.body.classList.remove('modal-open');
+        }
       }
     });
   }
 
   document.getElementById("modalsContainer").appendChild(modal);
   
-  // Focus management for mobile
+  // Prevent body scroll on mobile
+  document.body.classList.add('modal-open');
+  
+  // Fix modal positioning on mobile
   if (isMobile) {
+    modal.style.alignItems = 'flex-end';
+    modal.style.padding = '0';
+    
+    // Ensure content is scrollable
+    const modalBody = modal.querySelector('.modal-body');
+    if (modalBody) {
+      modalBody.style.maxHeight = 'calc(100vh - 150px)';
+      modalBody.style.overflowY = 'auto';
+    }
+    
+    // Focus management for mobile
     setTimeout(() => {
       const firstInput = modal.querySelector('input:not([type="hidden"]), textarea, select');
-      if (firstInput) {
+      if (firstInput && !firstInput.readOnly) {
         firstInput.focus();
       }
-    }, 100);
+    }, 300);
   }
   
   return modal;
