@@ -1087,6 +1087,12 @@ body.modal-open {
     height: calc(100vh - env(safe-area-inset-top));
   }
 }
+  /* Fix for full-screen modals to ignore safe area top inset */
+@supports (padding: env(safe-area-inset-top)) {
+  div.fixed.inset-0.z-50 {
+    top: 0;
+  }
+}
 
 /* Hide Safari bottom home indicator overlay */
 @media (max-width: 640px) {
