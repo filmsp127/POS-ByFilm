@@ -224,54 +224,52 @@ const SyncManager = {
 
   // Force sync all data
   async forceSync() {
-    if (this.syncStatus.isSyncing) {
-      Utils.showToast("กำลัง sync อยู่ กรุณารอสักครู่...", "info");
-      return;
+  if (this.syncStatus.isSyncing) {
+    Utils.showToast("กำลัง sync อยู่ กรุณารอสักครู่...", "info");
+    return;
+  }
+  
+  Utils.showLoading("กำลัง sync ข้อมูล...");
+  
+  try {
+    this.syncStatus.isSyncing = true;
+    
+    // Load จาก Firebase ก่อน
+    await App.loadFromFirebase();
+    
+    // หน่วงเวลาเล็กน้อย
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Sync pending data ถ้ามี
+    if (this.syncStatus.pendingSync.length > 0) {
+      await this.syncPendingData();
     }
     
-    Utils.showLoading("กำลัง sync ข้อมูลทั้งหมด...");
+    this.syncStatus.isSyncing = false;
+    Utils.hideLoading();
+    Utils.showToast("✅ Sync ข้อมูลสำเร็จ!", "success");
     
-    try {
-      // First, reload data from Firebase
-      await App.loadFromFirebase();
-      
-      // Then sync local changes
-      await App.syncWithFirebase();
-      
-      // Sync pending data
-      await this.syncPendingData();
-      
-      Utils.hideLoading();
-      Utils.showToast("✅ Sync ข้อมูลสำเร็จ!", "success");
-      
-      // Refresh UI
-      if (POS && POS.refresh) {
-        POS.refresh();
-      }
-      
-      // Refresh backoffice if open
-      if (BackOffice && BackOffice.currentPage) {
-        switch (BackOffice.currentPage) {
-          case 'products':
-            BackOffice.loadProductsList();
-            break;
-          case 'members':
-            BackOffice.loadMembersList();
-            break;
-          case 'sales':
-            BackOffice.loadSalesHistory();
-            break;
-          case 'dashboard':
-            BackOffice.updateDashboardStats();
-            break;
-        }
-      }
-    } catch (error) {
-      Utils.hideLoading();
-      console.error("Force sync error:", error);
+    // Refresh UI
+    if (POS && POS.refresh) {
+      POS.refresh();
+    }
+    
+    // Refresh backoffice
+    if (BackOffice && BackOffice.currentPage) {
+      BackOffice.openPage(BackOffice.currentPage);
+    }
+  } catch (error) {
+    this.syncStatus.isSyncing = false;
+    Utils.hideLoading();
+    console.error("Force sync error:", error);
+    
+    if (error.code === 'resource-exhausted') {
+      Utils.showToast("❌ ระบบ Firebase ถูกใช้งานมากเกินไป กรุณารอสักครู่", "error");
+    } else {
       Utils.showToast("❌ ไม่สามารถ sync ข้อมูลได้: " + error.message, "error");
     }
-  },
+  }
+},
 
   // Get sync status display
 getSyncStatusDisplay() {
