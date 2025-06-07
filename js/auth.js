@@ -94,7 +94,7 @@ const Auth = {
             <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <i class="fas fa-store text-2xl sm:text-3xl text-white"></i>
             </div>
-            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Modern POS</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">SP24 POS</h1>
             <p class="text-sm sm:text-base text-gray-600">ระบบขายหน้าร้านสำหรับทุกธุรกิจ</p>
           </div>
   
