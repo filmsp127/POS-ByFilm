@@ -4,13 +4,21 @@ const ShiftManager = {
   
   // Initialize shift manager
   init() {
-    console.log("🔄 Initializing Shift Manager...");
-    this.loadCurrentShift();
-    this.updateUI();
-    
-    // Check shift status every minute
-    setInterval(() => this.updateUI(), 60000);
-  },
+  console.log("🔄 Initializing Shift Manager...");
+  
+  // Load from localStorage first
+  this.loadCurrentShift();
+  
+  // Then check Firebase for latest data
+  if (window.FirebaseService && FirebaseService.isAuthenticated()) {
+    this.loadShiftFromFirebase();
+  }
+  
+  this.updateUI();
+  
+  // Check shift status every minute
+  setInterval(() => this.updateUI(), 60000);
+},
   
   // Load current shift from storage
   loadCurrentShift() {
@@ -27,6 +35,61 @@ const ShiftManager = {
       }
     }
   },
+  // Update current shift from Firebase
+updateFromFirebase(shift) {
+  console.log('📥 Updating shift from Firebase:', shift);
+  
+  // Check if it's the same store
+  const storeId = App.state.currentStoreId;
+  if (!storeId) return;
+  
+  this.currentShift = shift;
+  this.saveCurrentShift();
+  this.updateUI();
+  
+  // Notify user if needed
+  if (!this.notifiedAboutShift) {
+    Utils.showToast(`มีรอบที่เปิดอยู่: ${shift.employeeName}`, "info");
+    this.notifiedAboutShift = true;
+  }
+},
+
+// Clear current shift when no open shift
+clearCurrentShift() {
+  if (this.currentShift) {
+    console.log('🔄 Clearing current shift - no open shift in Firebase');
+    this.currentShift = null;
+    this.saveCurrentShift();
+    this.updateUI();
+    this.notifiedAboutShift = false;
+  }
+},
+
+// Load shift from Firebase on init
+async loadShiftFromFirebase() {
+  if (!FirebaseService.currentStore) return;
+  
+  try {
+    const storeId = FirebaseService.currentStore.id;
+    const snapshot = await FirebaseService.db
+      .collection('stores')
+      .doc(storeId)
+      .collection('shifts')
+      .where('status', '==', 'open')
+      .limit(1)
+      .get();
+    
+    if (!snapshot.empty) {
+      const doc = snapshot.docs[0];
+      const shift = { id: doc.id, ...doc.data() };
+      this.updateFromFirebase(shift);
+    } else {
+      this.clearCurrentShift();
+    }
+  } catch (error) {
+    console.error('Error loading shift from Firebase:', error);
+  }
+}
   
   // Save current shift
   saveCurrentShift() {
@@ -128,6 +191,26 @@ const ShiftManager = {
     this.currentShift.difference = (parseFloat(actualCash) || 0) - expectedCash;
     this.currentShift.status = 'closed';
     this.currentShift.closeNotes = closeNotes;
+    
+    // Update status in Firebase immediately
+if (window.FirebaseService && FirebaseService.isAuthenticated()) {
+  const storeId = FirebaseService.currentStore.id;
+  await FirebaseService.db
+    .collection('stores')
+    .doc(storeId)
+    .collection('shifts')
+    .doc(this.currentShift.id)
+    .update({
+      status: 'closed',
+      closeTime: new Date().toISOString(),
+      actualCash: parseFloat(actualCash) || 0,
+      expectedCash: expectedCash,
+      difference: (parseFloat(actualCash) || 0) - expectedCash,
+      closeBy: Auth.getCurrentUser()?.uid || this.currentShift.employeeName,
+      closeNotes: closeNotes,
+      closedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+}
     
     // Update in shifts array
     const shiftIndex = App.state.shifts.findIndex(s => s.id === this.currentShift.id);
@@ -301,7 +384,7 @@ const ShiftManager = {
       openShiftBtn.style.display = this.isShiftOpen() ? 'none' : 'block';
     }
     
-    if (closeShiftBtn) {
+    if (Btn) {
       closeShiftBtn.style.display = this.isShiftOpen() ? 'block' : 'none';
     }
     
