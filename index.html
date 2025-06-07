@@ -593,7 +593,97 @@
     border-left: 4px solid #ffa502;
     background: linear-gradient(to right, rgba(255, 165, 2, 0.1), rgba(255, 255, 255, 0.98));
   }
+/* Modal fixes for mobile */
+  @media (max-width: 640px) {
+    /* Fixed positioning for mobile modals */
+    .fixed {
+      align-items: flex-end !important;
+      padding: 0 !important;
+    }
+    
+    .fixed > div {
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      border-radius: 1.5rem 1.5rem 0 0;
+      animation: slideUp 0.3s ease-out;
+    }
+    
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+    
+    /* Ensure buttons are always visible */
+    .modal-footer {
+      position: sticky;
+      bottom: 0;
+      background: white;
+      z-index: 20;
+      border-top: 1px solid #e5e7eb;
+      padding: 1rem;
+      padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    }
+    
+    /* Make modal body scrollable */
+    .modal-body {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      max-height: calc(100vh - 120px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    }
+    
+    /* Ensure form elements are accessible */
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="date"],
+    input[type="password"],
+    textarea,
+    select {
+      font-size: 16px !important; /* Prevent zoom on iOS */
+    }
+  }
 
+  /* Fix z-index issues */
+  #modalsContainer {
+    position: relative;
+    z-index: 9999;
+  }
+  
+  .fixed {
+    z-index: 9999 !important;
+  }
+  
+  /* Ensure interactive elements are clickable */
+  button, input, select, textarea, a {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Fix cart panel on mobile */
+  #cartPanel {
+    z-index: 9998;
+  }
+  
+  /* Additional modal fixes */
+  .modal-container {
+    height: auto;
+    max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Prevent body scroll when modal is open */
+  body.modal-open {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
   /* Loading Spinner */
   .spinner {
     border: 3px solid rgba(255, 255, 255, 0.3);
@@ -942,8 +1032,11 @@
         </div>
       </div>
 
-      <!-- Dynamic Modals Container -->
+     <!-- Dynamic Modals Container -->
       <div id="modalsContainer"></div>
+
+      <!-- Cart Panel Container -->
+      <div id="cartPanelContainer"></div>
     </div>
 
     <!-- Toast Container -->
