@@ -200,11 +200,14 @@ const Auth = {
   },
 
   // Switch between login/signup tabs
+  // Switch between login/signup tabs
   switchTab(tab) {
     const loginTab = document.getElementById("loginTab");
     const signupTab = document.getElementById("signupTab");
     const loginForm = document.getElementById("loginForm");
     const signupForm = document.getElementById("signupForm");
+    // ---> เพิ่มส่วนนี้: ดึง authModal เข้ามาเพื่อเพิ่ม/ลบ class
+    const authModal = document.getElementById('authModal');
 
     if (tab === "login") {
       loginTab.className =
@@ -213,6 +216,11 @@ const Auth = {
         "flex-1 py-2 px-3 sm:px-4 rounded-md text-sm font-medium transition text-gray-600";
       loginForm.classList.remove("hidden");
       signupForm.classList.add("hidden");
+      // ---> เพิ่มส่วนนี้: กำหนด class สำหรับหน้า Login
+      if (authModal) {
+        authModal.classList.add('login-view');
+        authModal.classList.remove('signup-view');
+      }
     } else {
       signupTab.className =
         "flex-1 py-2 px-3 sm:px-4 rounded-md text-sm font-medium transition bg-white text-gray-800 shadow";
@@ -220,6 +228,11 @@ const Auth = {
         "flex-1 py-2 px-3 sm:px-4 rounded-md text-sm font-medium transition text-gray-600";
       signupForm.classList.remove("hidden");
       loginForm.classList.add("hidden");
+      // ---> เพิ่มส่วนนี้: กำหนด class สำหรับหน้า Signup
+      if (authModal) {
+        authModal.classList.add('signup-view');
+        authModal.classList.remove('login-view');
+      }
     }
   },
 
