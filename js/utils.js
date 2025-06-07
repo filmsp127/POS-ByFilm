@@ -73,9 +73,9 @@ createModal(content, options = {}) {
   const sizeClass = options.size || "w-full max-w-md";
   
   // สำหรับ modal ที่ต้องการเต็มจอบนมือถือ
-  const modalClass = isMobile && options.mobileFullscreen !== false 
-    ? "w-full h-full max-w-full max-h-full m-0 rounded-none" 
-    : sizeClass;
+const modalClass = isMobile && options.mobileFullscreen !== false 
+  ? "w-full h-screen max-w-full max-h-screen m-0 rounded-none" 
+  : sizeClass;
   
   // เพิ่ม max-height และ flex สำหรับ modal ทั่วไป
   const heightClass = modalClass.includes('h-full') ? '' : 'max-h-[90vh]';
