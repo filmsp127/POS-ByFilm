@@ -187,23 +187,40 @@ const Cart = {
   },
 
   open() {
-  const panel = document.getElementById("cartPanel");
+  // ตรวจสอบว่ามี panel อยู่แล้วหรือไม่
+  let panel = document.getElementById("cartPanel");
+  
   if (!panel) {
+    // ถ้าไม่มี ให้สร้างใหม่
+    console.log("Creating new cart panel...");
     this.createCartPanel();
-    // เพิ่ม setTimeout เพื่อให้ DOM render เสร็จก่อน
-    setTimeout(() => {
-      const newPanel = document.getElementById("cartPanel");
-      if (newPanel) {
-        newPanel.classList.remove("hidden");
+    
+    // รอให้ DOM render เสร็จ
+    requestAnimationFrame(() => {
+      panel = document.getElementById("cartPanel");
+      if (panel) {
+        panel.classList.remove("hidden");
+        this.loadMembers();
         this.render();
       } else {
-        console.error("Cart panel creation failed!");
-        Utils.showToast("เกิดข้อผิดพลาดในการเปิดตะกร้า", "error");
+        console.error("Failed to create cart panel!");
+        // ลองสร้างอีกครั้ง
+        setTimeout(() => {
+          this.createCartPanel();
+          const retryPanel = document.getElementById("cartPanel");
+          if (retryPanel) {
+            retryPanel.classList.remove("hidden");
+            this.loadMembers();
+            this.render();
+          }
+        }, 500);
       }
-    }, 100);
+    });
   } else {
+    // ถ้ามีแล้ว แค่แสดง
+    console.log("Showing existing cart panel...");
     panel.classList.remove("hidden");
-    this.loadMembers(); // โหลดสมาชิกใหม่ทุกครั้งที่เปิด
+    this.loadMembers();
     this.render();
   }
 },
