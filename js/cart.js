@@ -307,7 +307,7 @@ const Cart = {
             </div>
         `;
 
-    document.getElementById("cartPanelContainer").appendChild(panel);
+    document.getElementById("modalsContainer").appendChild(panel);
 
     // Load members after creating panel
     setTimeout(() => {
