@@ -803,140 +803,55 @@ setInterval(() => {
 
     // Sync with Firebase - ปรับปรุงให้ sync ทุกอย่างรวมทั้ง sales
   async syncWithFirebase() {
-    try {
-      if (!FirebaseService.currentStore) {
-        console.error("No current store for sync");
-        return;
-      }
-
-      console.log("Starting sync to Firebase...");
-      const storeId = FirebaseService.currentStore.id;
-      const storeRef = FirebaseService.db.collection("stores").doc(storeId);
-
-      // Log what we're syncing
-      console.log("Products to sync:", this.state.products.length);
-      console.log("Sales to sync:", this.state.sales.length);
-      console.log("Members to sync:", this.state.members.length);
-
-      // Sync store settings
-      await storeRef.set(
-        {
-          name:
-            this.state.settings.storeName || FirebaseService.currentStore.name,
-          address: this.state.settings.storeAddress || "",
-          phone: this.state.settings.storePhone || "",
-          settings: this.state.settings,
-          lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-
-      // ใช้ batches แยกเพื่อหลีกเลี่ยง limit 500 operations
-      let batch = FirebaseService.db.batch();
-      let operationCount = 0;
-      const MAX_BATCH_SIZE = 400; // เผื่อไว้หน่อย
-
-      // Sync products
-      for (const product of this.state.products) {
-        const productRef = storeRef
-          .collection("products")
-          .doc(product.id.toString());
-        batch.set(
-          productRef,
-          {
-            ...product,
-            lastSynced: firebase.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
-        operationCount++;
-
-        if (operationCount >= MAX_BATCH_SIZE) {
-          await batch.commit();
-          batch = FirebaseService.db.batch();
-          operationCount = 0;
-        }
-      }
-
-      // Sync categories
-      for (const category of this.state.categories) {
-        const categoryRef = storeRef
-          .collection("categories")
-          .doc(category.id.toString());
-        batch.set(
-          categoryRef,
-          {
-            ...category,
-            lastSynced: firebase.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
-        operationCount++;
-
-        if (operationCount >= MAX_BATCH_SIZE) {
-          await batch.commit();
-          batch = FirebaseService.db.batch();
-          operationCount = 0;
-        }
-      }
-
-      // Sync members
-      for (const member of this.state.members) {
-        const memberRef = storeRef
-          .collection("members")
-          .doc(member.id.toString());
-        batch.set(
-          memberRef,
-          {
-            ...member,
-            lastSynced: firebase.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
-        operationCount++;
-
-        if (operationCount >= MAX_BATCH_SIZE) {
-          await batch.commit();
-          batch = FirebaseService.db.batch();
-          operationCount = 0;
-        }
-      }
-
-      // Sync recent sales (last 50)
-      const recentSales = this.state.sales.slice(-50);
-      for (const sale of recentSales) {
-        const saleRef = storeRef
-          .collection("sales")
-          .doc(sale.id.toString());
-        batch.set(
-          saleRef,
-          {
-            ...sale,
-            lastSynced: firebase.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
-        operationCount++;
-
-        if (operationCount >= MAX_BATCH_SIZE) {
-          await batch.commit();
-          batch = FirebaseService.db.batch();
-          operationCount = 0;
-        }
-      }
-
-      // Commit remaining operations
-      if (operationCount > 0) {
-        await batch.commit();
-      }
-
-      console.log("✅ All data synced to Firebase");
-      return { success: true };
-    } catch (error) {
-      console.error("Error syncing to Firebase:", error);
-      throw error;
+  try {
+    if (!FirebaseService.currentStore) {
+      console.error("No current store for sync");
+      return;
     }
-  },
+
+    // ตรวจสอบว่ากำลัง sync อยู่หรือไม่
+    if (this.isSyncing) {
+      console.log("Already syncing, skipping...");
+      return;
+    }
+
+    this.isSyncing = true;
+    console.log("Starting sync to Firebase...");
+    
+    const storeId = FirebaseService.currentStore.id;
+    const storeRef = FirebaseService.db.collection("stores").doc(storeId);
+
+    // Sync store settings only
+    await storeRef.set({
+      name: this.state.settings.storeName || FirebaseService.currentStore.name,
+      address: this.state.settings.storeAddress || "",
+      phone: this.state.settings.storePhone || "",
+      settings: this.state.settings,
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    console.log("✅ Store settings synced");
+    
+    // ไม่ sync ข้อมูลทั้งหมดทุกครั้ง - ให้ sync เฉพาะที่จำเป็น
+    // Real-time listeners จะจัดการการ sync ข้อมูลอื่นๆ
+
+    this.isSyncing = false;
+    return { success: true };
+  } catch (error) {
+    this.isSyncing = false;
+    console.error("Error syncing to Firebase:", error);
+    
+    // ถ้าเป็น rate limit error ให้ retry หลังจาก delay
+    if (error.code === 'resource-exhausted') {
+      console.log("Rate limited, will retry later...");
+      setTimeout(() => {
+        this.syncWithFirebase();
+      }, 30000); // retry หลัง 30 วินาที
+    }
+    
+    throw error;
+  }
+},
 
    async saveData(skipFirebaseSync = false) {
   console.log("💾 saveData called, skipFirebaseSync:", skipFirebaseSync);
