@@ -7,13 +7,7 @@ const Payment = {
     console.log("Payment module initialized");
   },
 
-  open(items, subtotal, discount, total, memberId) {
-    // เพิ่มการเช็คว่าเปิดรอบหรือยัง
-    if (window.ShiftManager && !ShiftManager.isShiftOpen()) {
-      Utils.showToast("กรุณาเปิดรอบก่อนทำการขาย", "error");
-      return;
-    }
-
+   open(items, subtotal, discount, total, memberId) {
     this.currentSale = {
       items,
       subtotal,
