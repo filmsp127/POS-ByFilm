@@ -383,45 +383,75 @@ const Cart = {
   },
 
   // Save quick member
-  saveQuickMember(event) {
-    event.preventDefault();
+  async saveQuickMember(event) {  // เพิ่ม async
+  event.preventDefault();
 
-    const memberData = {
-      id: Date.now(),
-      name: document.getElementById("quickMemberName").value.trim(),
-      phone: document.getElementById("quickMemberPhone").value.trim(),
-      joinDate: new Date().toISOString(),
-      points: 0,
-      totalPurchase: 0,
-    };
+  const memberData = {
+    id: Date.now(),
+    name: document.getElementById("quickMemberName").value.trim(),
+    phone: document.getElementById("quickMemberPhone").value.trim(),
+    joinDate: new Date().toISOString(),
+    points: 0,
+    totalPurchase: 0,
+  };
 
-    // Validate phone
-    if (!Utils.validatePhone(memberData.phone)) {
-      Utils.showToast("เบอร์โทรไม่ถูกต้อง", "error");
-      return;
+  // Validate phone
+  if (!Utils.validatePhone(memberData.phone)) {
+    Utils.showToast("เบอร์โทรไม่ถูกต้อง", "error");
+    return;
+  }
+
+  // Check duplicate phone
+  const members = App.state.members || [];
+  if (members.find((m) => m.phone === memberData.phone)) {
+    Utils.showToast("เบอร์โทรนี้มีอยู่แล้ว", "error");
+    return;
+  }
+
+  // Add member
+  if (!App.state.members) App.state.members = [];
+  App.state.members.push(memberData);
+  
+  // ========== เพิ่มโค้ดใหม่ตรงนี้ (หลังจาก push memberData) ==========
+  // Sync to Firebase
+  if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+    try {
+      const storeId = FirebaseService.currentStore.id;
+      await FirebaseService.db
+        .collection("stores")
+        .doc(storeId)
+        .collection("members")
+        .doc(memberData.id.toString())
+        .set({
+          ...memberData,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      console.log("✅ Quick member synced to Firebase");
+    } catch (error) {
+      console.error("Error syncing quick member:", error);
+      if (window.SyncManager) {
+        SyncManager.queueOperation('member', memberData);
+      }
     }
-
-    // Check duplicate phone
-    const members = App.state.members || [];
-    if (members.find((m) => m.phone === memberData.phone)) {
-      Utils.showToast("เบอร์โทรนี้มีอยู่แล้ว", "error");
-      return;
+  } else {
+    // Queue for offline sync
+    if (window.SyncManager) {
+      SyncManager.queueOperation('member', memberData);
     }
+  }
+  // ========== จบโค้ดที่เพิ่มใหม่ ==========
+  
+  App.saveData();  // บรรทัดนี้ยังคงเดิม
 
-    // Add member
-    if (!App.state.members) App.state.members = [];
-    App.state.members.push(memberData);
-    App.saveData();
+  // Set as current member
+  this.setMember(memberData.id);
 
-    // Set as current member
-    this.setMember(memberData.id);
+  // Reload members list
+  this.loadMembers();
 
-    // Reload members list
-    this.loadMembers();
-
-    Utils.closeModal(event.target.closest(".fixed"));
-    Utils.showToast("เพิ่มสมาชิกสำเร็จ", "success");
-  },
+  Utils.closeModal(event.target.closest(".fixed"));
+  Utils.showToast("เพิ่มสมาชิกสำเร็จ", "success");
+},
 
   // Update member display
   updateMemberDisplay() {
