@@ -89,98 +89,100 @@ const Auth = {
   // Show Firebase login/signup - ปรับ UI ให้ responsive
   showFirebaseLogin() {
     const content = `
-        <div class="p-4 sm:p-8 max-w-md mx-auto max-h-screen overflow-y-auto">
-          <div class="text-center mb-6 sm:mb-8">
-            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <i class="fas fa-store text-2xl sm:text-3xl text-white"></i>
+        <div class="w-full h-full overflow-y-auto">
+          <div class="p-4 sm:p-8 max-w-md mx-auto pb-20"> <!-- เพิ่ม pb-20 เพื่อให้มีพื้นที่ด้านล่าง -->
+            <div class="text-center mb-6 sm:mb-8">
+              <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-store text-2xl sm:text-3xl text-white"></i>
+              </div>
+              <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">SP24 POS</h1>
+              <p class="text-sm sm:text-base text-gray-600">ระบบขายหน้าร้านสำหรับทุกธุรกิจ</p>
             </div>
-            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">SP24 POS</h1>
-            <p class="text-sm sm:text-base text-gray-600">ระบบขายหน้าร้านสำหรับทุกธุรกิจ</p>
+  
+            <!-- Login/Signup Tabs -->
+            <div class="flex bg-gray-100 rounded-lg p-1 mb-4 sm:mb-6">
+              <button onclick="Auth.switchTab('login')" id="loginTab" 
+                      class="flex-1 py-2 px-3 sm:px-4 rounded-md text-sm font-medium transition bg-white text-gray-800 shadow">
+                เข้าสู่ระบบ
+              </button>
+              <button onclick="Auth.switchTab('signup')" id="signupTab"
+                      class="flex-1 py-2 px-3 sm:px-4 rounded-md text-sm font-medium transition text-gray-600">
+                สมัครสมาชิก
+              </button>
+            </div>
+  
+            <!-- Login Form -->
+            <form id="loginForm" onsubmit="Auth.processFirebaseLogin(event)" class="space-y-3 sm:space-y-4">
+              <div>
+                <label class="text-gray-700 text-sm font-medium">อีเมล</label>
+                <input type="email" id="loginEmail" required
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="example@email.com">
+              </div>
+    
+              <div>
+                <label class="text-gray-700 text-sm font-medium">รหัสผ่าน</label>
+                <input type="password" id="loginPassword" required
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="••••••••">
+              </div>
+    
+              <button type="submit" class="w-full btn-primary py-2 sm:py-3 rounded-lg text-white font-medium">
+                <i class="fas fa-sign-in-alt mr-2"></i>เข้าสู่ระบบ
+              </button>
+            </form>
+  
+            <!-- Signup Form -->
+            <form id="signupForm" onsubmit="Auth.processFirebaseSignup(event)" class="space-y-3 sm:space-y-4 hidden">
+              <div>
+                <label class="text-gray-700 text-sm font-medium">ชื่อ-นามสกุล *</label>
+                <input type="text" id="signupName" required
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="ชื่อของคุณ">
+              </div>
+    
+              <div>
+                <label class="text-gray-700 text-sm font-medium">อีเมล *</label>
+                <input type="email" id="signupEmail" required
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="example@email.com">
+              </div>
+    
+              <div>
+                <label class="text-gray-700 text-sm font-medium">รหัสผ่าน *</label>
+                <input type="password" id="signupPassword" required minlength="6"
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="••••••••">
+                <div class="text-xs text-gray-500 mt-1">อย่างน้อย 6 ตัวอักษร</div>
+              </div>
+    
+              <div>
+                <label class="text-gray-700 text-sm font-medium">ยืนยันรหัสผ่าน *</label>
+                <input type="password" id="signupPasswordConfirm" required minlength="6"
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="••••••••">
+              </div>
+              
+              <div>
+                <label class="text-gray-700 text-sm font-medium">ชื่อร้าน *</label>
+                <input type="text" id="signupStoreName" required
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="ชื่อร้านของคุณ">
+              </div>
+              
+              <div>
+                <label class="text-gray-700 text-sm font-medium">ตั้ง PIN 6 หลัก *</label>
+                <input type="password" id="signupPin" required pattern="[0-9]{6}" maxlength="6"
+                       class="w-full mt-1 p-2 sm:p-3 text-xl text-center rounded-lg border border-gray-300 text-gray-800 tracking-widest focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="••••••">
+                <div class="text-xs text-gray-500 mt-1">ใช้สำหรับเข้าระบบครั้งต่อไป</div>
+              </div>
+    
+              <button type="submit" class="w-full btn-primary py-2 sm:py-3 rounded-lg text-white font-medium">
+                <i class="fas fa-user-plus mr-2"></i>สมัครสมาชิก
+              </button>
+            </form>
           </div>
-  
-          <!-- Login/Signup Tabs -->
-          <div class="flex bg-gray-100 rounded-lg p-1 mb-4 sm:mb-6">
-            <button onclick="Auth.switchTab('login')" id="loginTab" 
-                    class="flex-1 py-2 px-3 sm:px-4 rounded-md text-sm font-medium transition bg-white text-gray-800 shadow">
-              เข้าสู่ระบบ
-            </button>
-            <button onclick="Auth.switchTab('signup')" id="signupTab"
-                    class="flex-1 py-2 px-3 sm:px-4 rounded-md text-sm font-medium transition text-gray-600">
-              สมัครสมาชิก
-            </button>
-          </div>
-  
-          <!-- Login Form -->
-          <form id="loginForm" onsubmit="Auth.processFirebaseLogin(event)" class="space-y-3 sm:space-y-4">
-            <div>
-              <label class="text-gray-700 text-sm font-medium">อีเมล</label>
-              <input type="email" id="loginEmail" required
-                     class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                     placeholder="example@email.com">
-            </div>
-  
-            <div>
-              <label class="text-gray-700 text-sm font-medium">รหัสผ่าน</label>
-              <input type="password" id="loginPassword" required
-                     class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                     placeholder="••••••••">
-            </div>
-  
-            <button type="submit" class="w-full btn-primary py-2 sm:py-3 rounded-lg text-white font-medium">
-              <i class="fas fa-sign-in-alt mr-2"></i>เข้าสู่ระบบ
-            </button>
-          </form>
-  
-          <!-- Signup Form -->
-          <form id="signupForm" onsubmit="Auth.processFirebaseSignup(event)" class="space-y-3 sm:space-y-4 hidden">
-            <div>
-              <label class="text-gray-700 text-sm font-medium">ชื่อ-นามสกุล</label>
-              <input type="text" id="signupName" required
-                     class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                     placeholder="ชื่อของคุณ">
-            </div>
-  
-            <div>
-              <label class="text-gray-700 text-sm font-medium">อีเมล</label>
-              <input type="email" id="signupEmail" required
-                     class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                     placeholder="example@email.com">
-            </div>
-  
-            <div>
-              <label class="text-gray-700 text-sm font-medium">รหัสผ่าน</label>
-              <input type="password" id="signupPassword" required minlength="6"
-                     class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                     placeholder="••••••••">
-              <div class="text-xs text-gray-500 mt-1">อย่างน้อย 6 ตัวอักษร</div>
-            </div>
-  
-            <div>
-              <label class="text-gray-700 text-sm font-medium">ยืนยันรหัสผ่าน</label>
-              <input type="password" id="signupPasswordConfirm" required minlength="6"
-                     class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                     placeholder="••••••••">
-            </div>
-            
-            <div>
-              <label class="text-gray-700 text-sm font-medium">ชื่อร้าน</label>
-              <input type="text" id="signupStoreName" required
-                     class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                     placeholder="ชื่อร้านของคุณ">
-            </div>
-            
-            <div>
-              <label class="text-gray-700 text-sm font-medium">ตั้ง PIN 6 หลัก</label>
-              <input type="password" id="signupPin" required pattern="[0-9]{6}" maxlength="6"
-                     class="w-full mt-1 p-2 sm:p-3 text-xl text-center rounded-lg border border-gray-300 text-gray-800 tracking-widest focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                     placeholder="••••••">
-              <div class="text-xs text-gray-500 mt-1">ใช้สำหรับเข้าระบบครั้งต่อไป</div>
-            </div>
-  
-            <button type="submit" class="w-full btn-primary py-2 sm:py-3 rounded-lg text-white font-medium">
-              <i class="fas fa-user-plus mr-2"></i>สมัครสมาชิก
-            </button>
-          </form>
         </div>
       `;
 
@@ -189,7 +191,7 @@ const Auth = {
     modal.className =
       "fixed inset-0 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 z-50 flex items-center justify-center p-4";
     modal.innerHTML = `
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
           ${content}
         </div>
       `;
