@@ -1245,26 +1245,35 @@ setInterval(() => {
   }
 },
 
-  deleteProduct(id) {
+  async deleteProduct(id) {
+  try {
+    // Remove from local state
     this.state.products = this.state.products.filter((p) => p.id !== id);
-    this.saveData();
+    this.saveData(true); // Skip Firebase sync in saveData
 
     // Delete from Firebase
-    if (
-      window.FirebaseService &&
-      FirebaseService.isAuthenticated() &&
-      FirebaseService.currentStore
-    ) {
+    if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
       const storeId = FirebaseService.currentStore.id;
-      FirebaseService.db
+      await FirebaseService.db
         .collection("stores")
         .doc(storeId)
         .collection("products")
         .doc(id.toString())
-        .delete()
-        .catch(console.error);
+        .delete();
+      console.log("✅ Product deleted from Firebase");
+    } else {
+      // Queue for later sync if offline
+      if (window.SyncManager) {
+        SyncManager.queueOperation('productDelete', { id: id });
+      }
     }
-  },
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    // Restore product on error
+    this.loadProducts();
+    throw error;
+  }
+},
 
   // Categories
   getCategories() {
