@@ -63,7 +63,7 @@ const BackOffice = {
                 </div>
             </div>
         `;
-    document.getElementById("modalsContainer").appendChild(menu);
+    document.getElementById("cartPanelContainer").appendChild(menu);
   },
 
   openPage(page) {
