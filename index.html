@@ -52,6 +52,31 @@
   top: 0;
   z-index: 10;
 }
+  /* Fix สำหรับ modal เต็มจอบนมือถือ */
+@media (max-width: 640px) {
+  .modal-with-footer {
+    height: 100vh;
+    height: -webkit-fill-available; /* สำหรับ Safari */
+    max-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .modal-body {
+    flex: 1;
+    min-height: 0; /* สำคัญ! ทำให้ scroll ทำงาน */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .modal-footer {
+    flex-shrink: 0;
+    position: relative; /* เปลี่ยนจาก sticky เป็น relative บนมือถือ */
+    bottom: 0;
+    /* เพิ่ม padding สำหรับ safe area */
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+}
 
 /* Modal Body ที่ scroll ได้ */
 .modal-body {
