@@ -1079,18 +1079,12 @@ body.modal-open {
   /* Safari status bar และ notch fix */
 @supports (padding: env(safe-area-inset-top)) {
   body {
-    padding-top: 0; /* เปลี่ยนจาก env(safe-area-inset-top) เป็น 0 */
+    padding-top: env(safe-area-inset-top);
   }
   
   .fixed.inset-0 {
     top: env(safe-area-inset-top);
     height: calc(100vh - env(safe-area-inset-top));
-  }
-}
-  /* Fix for full-screen modals to ignore safe area top inset */
-@supports (padding: env(safe-area-inset-top)) {
-  div.fixed.inset-0.z-50 {
-    top: 0;
   }
 }
 
