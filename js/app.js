@@ -1432,13 +1432,21 @@ setInterval(() => {
   },
 
   // Show user menu
-  showUserMenu() {
-    const user = Auth.getCurrentUser();
-    const store = Auth.getCurrentStore();
-    if (!user) return;
+showUserMenu() {
+  const user = Auth.getCurrentUser();
+  const store = Auth.getCurrentStore();
+  if (!user) return;
 
-    const content = `
-      <div class="p-4">
+  const content = `
+    <div class="modal-with-footer h-full flex flex-col">
+      <div class="modal-header bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 flex items-center justify-between">
+        <h3 class="text-lg font-bold">เมนูผู้ใช้</h3>
+        <button onclick="Utils.closeModal(this.closest('.fixed'))" class="w-10 h-10 flex items-center justify-center hover:bg-white/20 rounded-lg transition">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
         <div class="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200">
           <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
             <i class="fas fa-user text-white"></i>
@@ -1458,29 +1466,33 @@ setInterval(() => {
         
         <div class="space-y-2">
           <button onclick="Auth.changePin(); Utils.closeModal(this.closest('.fixed'))" 
-                  class="w-full text-left p-3 hover:bg-gray-100 rounded-lg transition">
-            <i class="fas fa-key mr-3 text-gray-600"></i>เปลี่ยนรหัส PIN
+                  class="w-full text-left p-4 hover:bg-gray-100 rounded-lg transition flex items-center">
+            <i class="fas fa-key mr-3 text-gray-600 w-5"></i>
+            <span>เปลี่ยนรหัส PIN</span>
           </button>
           ${
             store
               ? `
           <button onclick="App.switchStore(); Utils.closeModal(this.closest('.fixed'))" 
-                  class="w-full text-left p-3 hover:bg-gray-100 rounded-lg transition">
-            <i class="fas fa-store mr-3 text-gray-600"></i>เปลี่ยนร้าน
+                  class="w-full text-left p-4 hover:bg-gray-100 rounded-lg transition flex items-center">
+            <i class="fas fa-store mr-3 text-gray-600 w-5"></i>
+            <span>เปลี่ยนร้าน</span>
           </button>
           `
               : ""
           }
           <button onclick="App.logout(); Utils.closeModal(this.closest('.fixed'))" 
-                  class="w-full text-left p-3 hover:bg-red-50 text-red-600 rounded-lg transition">
-            <i class="fas fa-sign-out-alt mr-3"></i>ออกจากระบบ
+                  class="w-full text-left p-4 hover:bg-red-50 text-red-600 rounded-lg transition flex items-center">
+            <i class="fas fa-sign-out-alt mr-3 w-5"></i>
+            <span>ออกจากระบบ</span>
           </button>
         </div>
       </div>
-    `;
+    </div>
+  `;
 
-    Utils.createModal(content, { size: "w-full max-w-xs" });
-  },
+  Utils.createModal(content, { size: "w-full max-w-sm", mobileFullscreen: true });
+},
 
   // Switch store
   switchStore() {
