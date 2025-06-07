@@ -1254,30 +1254,6 @@ body.modal-open {
             alert('BackOffice module not loaded properly');
           }
         };
-        // เพิ่มใน index.html หลัง cart.js โหลด
-document.addEventListener("DOMContentLoaded", function() {
-  // ตรวจสอบว่า Cart module โหลดสำเร็จ
-  if (typeof Cart === 'undefined') {
-    console.error("Cart module not loaded!");
-  }
-  
-  // ตรวจสอบ modalsContainer
-  if (!document.getElementById("modalsContainer")) {
-    console.error("modalsContainer missing!");
-  }
-});
-
-// Override Cart.open เพื่อ debug
-const originalCartOpen = Cart.open;
-Cart.open = function() {
-  console.log("Cart.open called");
-  try {
-    originalCartOpen.call(this);
-  } catch (error) {
-    console.error("Error in Cart.open:", error);
-    Utils.showToast("เกิดข้อผิดพลาดในการเปิดตะกร้า", "error");
-  }
-};
       }
     </script>
   </body>
