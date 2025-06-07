@@ -33,53 +33,53 @@ setupRealtimeListener() {
   
   const storeId = FirebaseService.currentStore.id;
   
-  // Listen to ALL shifts, not just open ones
+  // ปรับปรุงการ query ให้ดีขึ้น
   this.shiftListener = FirebaseService.db
     .collection('stores')
     .doc(storeId)
     .collection('shifts')
+    .where('status', '==', 'open')
     .orderBy('openTime', 'desc')
     .limit(1)
     .onSnapshot((snapshot) => {
-      console.log('📥 Shift changes detected:', snapshot.size);
+      console.log('📥 Open shifts found:', snapshot.size);
       
       if (!snapshot.empty) {
         const doc = snapshot.docs[0];
         const shift = { id: doc.id, ...doc.data() };
         
-        // Check if it's an open shift
-        if (shift.status === 'open') {
-          // Check if it's our shift or someone else's
-          const currentUser = Auth.getCurrentUser();
-          const isOurShift = this.currentShift && this.currentShift.id === shift.id;
-          
-          if (!isOurShift) {
-            // Someone else opened a shift
-            console.log('🔄 Another device opened shift:', shift.employeeName);
-            Utils.showToast(`${shift.employeeName} เปิดรอบแล้ว`, "info");
-          }
-          
-          this.currentShift = shift;
-          this.saveCurrentShift();
-          this.updateUI();
-        } else if (shift.status === 'closed' && this.currentShift && this.currentShift.id === shift.id) {
-          // Our shift was closed
-          console.log('🔄 Shift was closed');
-          Utils.showToast('รอบถูกปิดแล้ว', "info");
-          this.currentShift = null;
-          this.saveCurrentShift();
-          this.updateUI();
+        // เช็คว่าเป็น shift ของเราหรือไม่
+        const currentUser = Auth.getCurrentUser();
+        const isOurShift = this.currentShift && this.currentShift.id === shift.id;
+        
+        if (!isOurShift && this.currentShift && this.currentShift.status === 'open') {
+          // มี shift เปิดอยู่แล้ว
+          console.log('⚠️ Multiple open shifts detected');
+          return;
         }
+        
+        if (!isOurShift) {
+          console.log('🔄 Loading existing shift:', shift.employeeName);
+          Utils.showToast(`พบรอบที่เปิดอยู่: ${shift.employeeName}`, "info");
+        }
+        
+        this.currentShift = shift;
+        this.saveCurrentShift();
+        this.updateUI();
       } else if (this.currentShift) {
-        // No shifts found but we had one
-        console.log('🔄 No shifts found');
+        // ไม่มี shift ที่เปิดอยู่
+        console.log('🔄 No open shifts found');
         this.currentShift = null;
         this.saveCurrentShift();
         this.updateUI();
       }
     }, (error) => {
       console.error('Shift listener error:', error);
+      // ถ้า error ให้ใช้ local data
+      this.loadCurrentShift();
+      this.updateUI();
     });
+},
     
   // Also check for the latest open shift immediately
   FirebaseService.db
@@ -145,80 +145,85 @@ setupRealtimeListener() {
   
   // Open shift - แก้ไขให้ sync ทันที
   async openShift(employeeName, openingCash, notes = '') {
-    if (this.isShiftOpen()) {
-      Utils.showToast("มีรอบที่เปิดอยู่แล้ว กรุณาปิดรอบก่อน", "error");
-      return false;
-    }
-    
-    const now = new Date();
-    const shiftNumber = await this.getNextShiftNumber();
-    
-    const newShift = {
-      id: `SHIFT_${now.toISOString().split('T')[0]}_${String(shiftNumber).padStart(3, '0')}`,
-      shiftNumber: shiftNumber,
-      date: now.toISOString().split('T')[0],
-      openTime: now.toISOString(),
-      closeTime: null,
-      employeeName: employeeName.trim(),
-      openBy: Auth.getCurrentUser()?.uid || employeeName,
-      closeBy: null,
-      openingCash: parseFloat(openingCash) || 0,
-      closingCash: 0,
-      expectedCash: parseFloat(openingCash) || 0,
-      actualCash: 0,
-      difference: 0,
-      sales: {
-        total: 0,
-        cash: 0,
-        transfer: 0,
-        other: 0,
-        bills: 0,
-        refunds: 0,
-        refundAmount: 0
-      },
-      salesIds: [],
-      status: 'open',
-      notes: notes,
-      closeNotes: ''
-    };
-    
-    // Sync to Firebase FIRST
-    if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
-      try {
-        const storeId = FirebaseService.currentStore.id;
-        await FirebaseService.db
-          .collection('stores')
-          .doc(storeId)
-          .collection('shifts')
-          .doc(newShift.id)
-          .set({
-            ...newShift,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            storeId: storeId
-          });
-        
-        console.log('✅ Shift synced to Firebase immediately');
-      } catch (error) {
-        console.error('Error syncing shift:', error);
-        Utils.showToast('เปิดรอบได้แต่ sync ไม่สำเร็จ', 'warning');
+  if (this.isShiftOpen()) {
+    Utils.showToast("มีรอบที่เปิดอยู่แล้ว กรุณาปิดรอบก่อน", "error");
+    return false;
+  }
+  
+  const now = new Date();
+  const shiftNumber = await this.getNextShiftNumber();
+  
+  const newShift = {
+    id: `SHIFT_${now.toISOString().split('T')[0]}_${String(shiftNumber).padStart(3, '0')}`,
+    shiftNumber: shiftNumber,
+    date: now.toISOString().split('T')[0],
+    openTime: now.toISOString(),
+    closeTime: null,
+    employeeName: employeeName.trim(),
+    openBy: Auth.getCurrentUser()?.uid || employeeName,
+    closeBy: null,
+    openingCash: parseFloat(openingCash) || 0,
+    closingCash: 0,
+    expectedCash: parseFloat(openingCash) || 0,
+    actualCash: 0,
+    difference: 0,
+    sales: {
+      total: 0,
+      cash: 0,
+      transfer: 0,
+      other: 0,
+      bills: 0,
+      refunds: 0,
+      refundAmount: 0
+    },
+    salesIds: [],
+    status: 'open',
+    notes: notes,
+    closeNotes: ''
+  };
+  
+  // Set current shift ก่อน sync
+  this.currentShift = newShift;
+  this.saveCurrentShift();
+  
+  // Add to shifts history
+  if (!App.state.shifts) App.state.shifts = [];
+  App.state.shifts.push(newShift);
+  App.saveData();
+  
+  // Update UI ทันที
+  this.updateUI();
+  
+  // Sync to Firebase แบบ async
+  if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+    try {
+      const storeId = FirebaseService.currentStore.id;
+      await FirebaseService.db
+        .collection('stores')
+        .doc(storeId)
+        .collection('shifts')
+        .doc(newShift.id)
+        .set({
+          ...newShift,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          storeId: storeId
+        });
+      
+      console.log('✅ Shift synced to Firebase');
+    } catch (error) {
+      console.error('Error syncing shift:', error);
+      // เก็บไว้ sync ทีหลัง
+      if (window.SyncManager) {
+        SyncManager.addToPendingSync('shift', newShift);
       }
     }
-    
-    // Set current shift
-    this.currentShift = newShift;
-    this.saveCurrentShift();
-    
-    // Add to shifts history
-    if (!App.state.shifts) App.state.shifts = [];
-    App.state.shifts.push(newShift);
-    App.saveData();
-    
-    console.log(`✅ Shift opened by ${employeeName}`);
-    Utils.showToast(`เปิดรอบสำเร็จ - ${employeeName}`, "success");
-    
-    this.updateUI();
-    return true;
-  },
+  }
+  
+  console.log(`✅ Shift opened by ${employeeName}`);
+  Utils.showToast(`เปิดรอบสำเร็จ - ${employeeName}`, "success");
+  
+  return true;
+},
   
   // Close shift - แก้ไขให้ sync ทันที
   async closeShift(actualCash, closeNotes = '') {
@@ -292,29 +297,32 @@ setupRealtimeListener() {
   
   // Get next shift number for the day
   async getNextShiftNumber() {
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Try to get from Firebase first
-    if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
-      try {
-        const storeId = FirebaseService.currentStore.id;
-        const snapshot = await FirebaseService.db
-          .collection('stores')
-          .doc(storeId)
-          .collection('shifts')
-          .where('date', '==', today)
-          .get();
-        
-        return snapshot.size + 1;
-      } catch (error) {
-        console.error('Error getting shift number:', error);
-      }
+  const today = new Date().toISOString().split('T')[0];
+  
+  // Get from local data first
+  const localShifts = (App.state.shifts || []).filter(s => s.date === today);
+  let nextNumber = localShifts.length + 1;
+  
+  // Try to get from Firebase if online
+  if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore && navigator.onLine) {
+    try {
+      const storeId = FirebaseService.currentStore.id;
+      const snapshot = await FirebaseService.db
+        .collection('stores')
+        .doc(storeId)
+        .collection('shifts')
+        .where('date', '==', today)
+        .get();
+      
+      // Use the higher number
+      nextNumber = Math.max(nextNumber, snapshot.size + 1);
+    } catch (error) {
+      console.warn('Could not get shift number from Firebase:', error);
     }
-    
-    // Fallback to local
-    const todayShifts = (App.state.shifts || []).filter(s => s.date === today);
-    return todayShifts.length + 1;
-  },
+  }
+  
+  return nextNumber;
+},
   
   // Update UI
   updateUI() {
