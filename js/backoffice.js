@@ -911,17 +911,19 @@ const BackOffice = {
           </span>
         </td>
         <td class="p-3 text-center">
-          <button onclick="BackOffice.editProduct(${
-            product.id
-          })" class="text-blue-600 hover:text-blue-700 mr-2">
-            <i class="fas fa-edit"></i>
-          </button>
-          <button onclick="BackOffice.deleteProduct(${
-            product.id
-          })" class="text-red-600 hover:text-red-700">
-            <i class="fas fa-trash"></i>
-          </button>
-        </td>
+  <div class="flex justify-center gap-2">
+    <button onclick="BackOffice.editProduct(${
+      product.id
+    })" class="text-blue-600 hover:text-blue-700 p-2 hover:bg-blue-50 rounded-lg transition">
+      <i class="fas fa-edit"></i>
+    </button>
+    <button onclick="BackOffice.deleteProduct(${
+      product.id
+    })" class="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition">
+      <i class="fas fa-trash"></i>
+    </button>
+  </div>
+</td>
       `;
       tbody.appendChild(tr);
     });
