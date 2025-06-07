@@ -187,15 +187,26 @@ const Cart = {
   },
 
   open() {
-    const panel = document.getElementById("cartPanel");
-    if (!panel) {
-      this.createCartPanel();
-    } else {
-      panel.classList.remove("hidden");
-    }
+  const panel = document.getElementById("cartPanel");
+  if (!panel) {
+    this.createCartPanel();
+    // เพิ่ม setTimeout เพื่อให้ DOM render เสร็จก่อน
+    setTimeout(() => {
+      const newPanel = document.getElementById("cartPanel");
+      if (newPanel) {
+        newPanel.classList.remove("hidden");
+        this.render();
+      } else {
+        console.error("Cart panel creation failed!");
+        Utils.showToast("เกิดข้อผิดพลาดในการเปิดตะกร้า", "error");
+      }
+    }, 100);
+  } else {
+    panel.classList.remove("hidden");
     this.loadMembers(); // โหลดสมาชิกใหม่ทุกครั้งที่เปิด
     this.render();
-  },
+  }
+},
 
   close() {
     const panel = document.getElementById("cartPanel");
@@ -205,6 +216,15 @@ const Cart = {
   },
 
   createCartPanel() {
+  // ตรวจสอบว่ามี modalsContainer หรือไม่
+  const container = document.getElementById("modalsContainer");
+  if (!container) {
+    console.error("modalsContainer not found!");
+    // สร้าง container ถ้าไม่มี
+    const newContainer = document.createElement("div");
+    newContainer.id = "modalsContainer";
+    document.body.appendChild(newContainer);
+  }
     const panel = document.createElement("div");
     panel.id = "cartPanel";
     panel.className = "fixed inset-0 z-40 hidden";
@@ -292,12 +312,17 @@ const Cart = {
     `;
 
     document.getElementById("modalsContainer").appendChild(panel);
+     // ตรวจสอบว่า panel ถูกสร้างสำเร็จ
+  if (!document.getElementById("cartPanel")) {
+    console.error("Failed to create cart panel!");
+    return;
+  }
 
-    // Load members after creating panel
-    setTimeout(() => {
-      this.loadMembers();
-    }, 100);
-  },
+    // Load members after creating panel with longer delay
+  setTimeout(() => {
+    this.loadMembers();
+  }, 200);
+},
 
   loadMembers() {
     console.log("Loading members...");
