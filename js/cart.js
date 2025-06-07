@@ -252,7 +252,8 @@ const Cart = {
   panel.id = "cartPanel";
   panel.className = "fixed inset-0 z-40 hidden";
   
-  // ใส่ HTML content ตามเดิม...
+  // ใส่ HTML content ตรงนี้ให้ถูกต้อง
+  panel.innerHTML = `
       <div class="absolute inset-0 bg-black/50" onclick="Cart.close()"></div>
       <div class="cart-panel-content absolute right-0 top-0 h-full w-full sm:w-96 max-w-full bg-white shadow-2xl flex flex-col">
         <!-- Cart Header -->
@@ -333,16 +334,18 @@ const Cart = {
           </div>
         </div>
       </div>
-    `;
+  `;
 
-    document.getElementById("modalsContainer").appendChild(panel);
-     // ตรวจสอบว่า panel ถูกสร้างสำเร็จ
+  // เพิ่ม panel เข้าไปใน container
+  container.appendChild(panel);
+  
+  // ตรวจสอบว่า panel ถูกสร้างสำเร็จ
   if (!document.getElementById("cartPanel")) {
     console.error("Failed to create cart panel!");
     return;
   }
 
-    // Load members after creating panel with longer delay
+  // Load members after creating panel with longer delay
   setTimeout(() => {
     this.loadMembers();
   }, 200);
