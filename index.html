@@ -870,7 +870,7 @@
     </style>
   </head>
   <body>
-    <div id="app">
+    <div id="app" class="surface-primary">
       <!-- Loading Screen -->
       <div
         id="loadingScreen"
@@ -885,7 +885,7 @@
       </div>
 
       <!-- Main POS Interface -->
-      <div id="posInterface" class="flex flex-col h-full">
+      <div id="posInterface" class="flex flex-col h-full surface-primary"> class="flex flex-col h-full">
         <!-- Top Bar -->
         <div class="top-bar p-3 flex items-center justify-between">
           <div class="flex items-center gap-3">
@@ -930,8 +930,8 @@
         </div>
 
         <!-- Products Grid -->
-        <div class="flex-1 overflow-y-auto px-3 pb-3">
-          <div class="products-container">
+<div class="flex-1 overflow-y-auto px-3 pb-3 surface-primary">
+  <div class="products-container surface-white rounded-xl shadow-sm">
             <div
               class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
               id="productsGrid"
