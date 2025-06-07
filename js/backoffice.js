@@ -1136,7 +1136,7 @@ const BackOffice = {
     }
 
     document.getElementById("productModal").classList.remove("hidden");
-  },
+}
 
   deleteProduct(id) {
     Utils.confirm("ต้องการลบสินค้านี้?", () => {
