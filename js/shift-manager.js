@@ -342,7 +342,7 @@ const ShiftManager = {
           <h3 class="text-lg font-bold">เปิดรอบการขาย</h3>
         </div>
         
-        <div class="modal-body">
+        <div class="modal-body" style="padding-bottom: 100px;">
           <form id="openShiftForm" onsubmit="ShiftManager.processOpenShift(event)">
             <div class="space-y-4">
               <div>
@@ -382,18 +382,18 @@ const ShiftManager = {
           </form>
         </div>
         
-        <div class="modal-footer">
-          <div class="flex gap-3">
-            <button type="button" onclick="Utils.closeModal(this.closest('.fixed'))"
-                    class="flex-1 bg-gray-200 hover:bg-gray-300 py-3 rounded-lg text-gray-800 font-medium transition">
-              ยกเลิก
-            </button>
-            <button type="submit" form="openShiftForm"
-                    class="flex-1 bg-green-500 hover:bg-green-600 py-3 rounded-lg text-white font-medium transition">
-              <i class="fas fa-play mr-2"></i>เปิดรอบ
-            </button>
-          </div>
-        </div>
+        <div class="modal-footer" style="position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; padding: 1rem; padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);">
+  <div class="flex gap-3 max-w-md mx-auto">
+    <button type="button" onclick="Utils.closeModal(this.closest('.fixed'))"
+            class="flex-1 bg-gray-200 hover:bg-gray-300 py-3 rounded-lg text-gray-800 font-medium transition">
+      ยกเลิก
+    </button>
+    <button type="submit" form="openShiftForm"
+            class="flex-1 bg-green-500 hover:bg-green-600 py-3 rounded-lg text-white font-medium transition">
+      <i class="fas fa-play mr-2"></i>เปิดรอบ
+    </button>
+  </div>
+</div>
       </div>
     `;
     
