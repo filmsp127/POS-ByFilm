@@ -3,7 +3,7 @@ const Cart = {
   items: [],
   discount: 0,
   memberId: null,
-  pointsUsed: 0, // แต้มที่ใช้
+  pointsUsed: 0,
 
   init() {
     this.loadCart();
@@ -572,6 +572,11 @@ const Cart = {
   },
 
   checkout() {
+   if (window.ShiftManager && !ShiftManager.isShiftOpen()) {
+      Utils.showToast("กรุณาเปิดรอบก่อนทำการขาย", "error");
+      return;
+    }
+
     if (this.items.length === 0) {
       Utils.showToast("ไม่มีสินค้าในตะกร้า", "error");
       return;
