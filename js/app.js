@@ -450,17 +450,38 @@ setInterval(() => {
       // Load categories
       const categoriesSnapshot = await storeRef.collection("categories").get();
       const categories = [];
+      
+      // สร้าง map ของ categories ที่มีอยู่เพื่อเก็บ ID สูงสุด
+      let maxCategoryId = 0;
+      
       categoriesSnapshot.forEach((doc) => {
         const data = doc.data();
+        const categoryId = data.id || parseInt(doc.id);
         categories.push({ 
           ...data, 
-          id: data.id || parseInt(doc.id) 
+          id: categoryId
         });
+        maxCategoryId = Math.max(maxCategoryId, categoryId);
       });
       
       if (categories.length > 0) {
+        // ตรวจสอบว่ามีหมวดหมู่ "ทั้งหมด" หรือไม่
+        const hasAllCategory = categories.find(cat => cat.id === 1);
+        if (!hasAllCategory) {
+          categories.unshift({
+            id: 1,
+            name: "ทั้งหมด",
+            icon: "fa-border-all",
+            color: "purple",
+            protected: true,
+          });
+        }
+        
         this.state.categories = categories;
         console.log("✅ Loaded categories:", categories.length);
+        
+        // เก็บ max ID สำหรับการเพิ่มหมวดหมู่ใหม่
+        window._maxCategoryId = maxCategoryId;
       } else {
         // If no categories, create defaults
         this.loadDefaultCategories();
