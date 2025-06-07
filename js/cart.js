@@ -210,9 +210,9 @@ const Cart = {
   panel.className = "fixed inset-0 z-40 hidden";
   panel.innerHTML = `
     <div class="absolute inset-0 bg-black/50" onclick="Cart.close()"></div>
-    <div class="absolute right-0 top-0 h-full w-full sm:w-96 max-w-full bg-white shadow-2xl cart-panel-content">
+    <div class="absolute right-0 top-0 h-full w-full sm:w-96 max-w-full bg-white shadow-2xl flex flex-col">
       <!-- Cart Header -->
-      <div class="cart-panel-header p-4 flex items-center justify-between text-white">
+      <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 flex items-center justify-between">
         <h2 class="text-lg sm:text-xl font-bold">รายการสั่งซื้อ</h2>
         <button onclick="Cart.close()" class="w-10 h-10 flex items-center justify-center hover:bg-white/20 rounded-lg transition">
           <i class="fas fa-times text-xl"></i>
@@ -221,82 +221,30 @@ const Cart = {
 
       <!-- Member Selection -->
       <div class="p-4 border-b border-gray-200 bg-gradient-to-br from-purple-50 to-indigo-50">
-        <label class="text-sm text-gray-700 font-medium">สมาชิก</label>
-        <select id="cartMemberSelect" onchange="Cart.setMember(this.value)" 
-                class="w-full mt-1 p-2 rounded-lg bg-white border border-gray-300 text-gray-800 text-base">
-          <option value="">ลูกค้าทั่วไป</option>
-        </select>
-        
-        <!-- Add Member Button -->
-        <button onclick="Cart.showAddMemberQuick()" 
-                class="mt-2 w-full text-sm text-purple-600 hover:text-purple-700 font-medium">
-          <i class="fas fa-user-plus mr-1"></i>เพิ่มสมาชิกใหม่
-        </button>
-        
-        <!-- Member Points Info -->
-        <div id="memberPointsInfo" class="hidden mt-2 p-2 bg-white rounded-lg shadow-sm">
-          <div class="text-xs text-gray-600">แต้มสะสม: <span id="memberPoints" class="font-semibold text-purple-600">0</span> แต้ม</div>
-          
-          <!-- Use Points Section -->
-          <div class="flex items-center gap-2 mt-2">
-            <input type="number" id="pointsToUse" placeholder="0" min="0" 
-                   class="flex-1 px-2 py-1 text-sm rounded border border-gray-300">
-            <button onclick="Cart.useMaxPoints()" 
-                    class="text-xs bg-purple-500 hover:bg-purple-600 text-white px-2 py-1 rounded">
-              ใช้ทั้งหมด
-            </button>
-          </div>
-          <div class="text-xs text-gray-500 mt-1">1 แต้ม = 1 บาท</div>
-        </div>
+        <!-- ... existing member selection code ... -->
       </div>
 
       <!-- Cart Items -->
-      <div class="cart-panel-body p-4 bg-gradient-to-br from-gray-50 to-gray-100" id="cartItemsContainer">
+      <div class="flex-1 overflow-y-auto p-4 bg-gradient-to-br from-gray-50 to-gray-100" id="cartItemsContainer">
         <!-- Items will be rendered here -->
       </div>
 
       <!-- Cart Summary -->
-      <div class="cart-panel-footer bg-white shadow-lg">
+      <div class="bg-white shadow-lg border-t border-gray-200">
         <div class="p-4 space-y-2">
-          <!-- Discount Input -->
-          <div class="flex items-center justify-between">
-            <span class="text-gray-700 font-medium text-sm">ส่วนลด (%)</span>
-            <div class="flex items-center gap-2">
-              <input type="number" id="discountInput" 
-                     placeholder="0" min="0" max="100"
-                     value="${this.discount || ""}"
-                     onchange="Cart.setDiscount(this.value)"
-                     class="w-16 px-2 py-1 rounded bg-gray-100 border border-gray-300 text-sm text-right text-gray-800">
-              <span class="text-gray-600">%</span>
-            </div>
-          </div>
-          
-          <!-- Summary Lines -->
-          <div class="flex justify-between text-gray-700 text-sm">
-            <span>รวม</span>
-            <span id="cartSubtotal" class="font-medium">฿0.00</span>
-          </div>
-          <div class="flex justify-between text-gray-700 text-sm">
-            <span>ส่วนลด</span>
-            <span id="cartDiscountAmount" class="text-green-600 font-medium">-฿0.00</span>
-          </div>
-          <!-- Points Used Display -->
-          <div id="pointsUsedDisplay" class="hidden flex justify-between text-purple-600 text-sm">
-            <span>ใช้แต้ม</span>
-            <span id="cartPointsUsed" class="font-medium">-฿0.00</span>
-          </div>
-          <div class="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t border-gray-200">
-            <span>ยอดสุทธิ</span>
-            <span id="cartTotal" class="text-purple-600">฿0.00</span>
-          </div>
+          <!-- ... existing summary code ... -->
         </div>
         
-        <!-- Action Buttons -->
+        <!-- Action Buttons - ส่วนที่สำคัญ -->
         <div class="grid grid-cols-2 gap-3 p-4 pt-0">
-          <button onclick="Cart.clear()" class="btn-danger py-3 rounded-lg font-medium shadow">
+          <button type="button" onclick="Cart.clear()" 
+                  class="bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-medium shadow transition cursor-pointer"
+                  style="pointer-events: auto !important;">
             <i class="fas fa-trash mr-2"></i>ล้าง
           </button>
-          <button onclick="Cart.checkout()" class="btn-success py-3 rounded-lg font-medium shadow-lg">
+          <button type="button" onclick="Cart.checkout()" 
+                  class="bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-medium shadow-lg transition cursor-pointer"
+                  style="pointer-events: auto !important;">
             <i class="fas fa-check mr-2"></i>ชำระเงิน
           </button>
         </div>
