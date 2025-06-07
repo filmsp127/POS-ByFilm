@@ -250,77 +250,119 @@ const Categories = {
   },
 
   // Update category
-  update(id, updates) {
-    const categories = this.getAll();
-    const index = categories.findIndex((cat) => cat.id === id);
+  async update(id, updates) {
+  const categories = this.getAll();
+  const index = categories.findIndex((cat) => cat.id === id);
 
-    if (index === -1) {
-      Utils.showToast("ไม่พบหมวดหมู่ที่ต้องการแก้ไข", "error");
-      return false;
+  if (index === -1) {
+    Utils.showToast("ไม่พบหมวดหมู่ที่ต้องการแก้ไข", "error");
+    return false;
+  }
+
+  const category = categories[index];
+
+  if (category.protected) {
+    Utils.showToast("ไม่สามารถแก้ไขหมวดหมู่นี้ได้", "error");
+    return false;
+  }
+
+  // Update category
+  categories[index] = {
+    ...category,
+    ...updates,
+    updatedAt: Date.now(),
+  };
+
+  App.saveData(true); // Skip Firebase sync in saveData
+
+  // Sync to Firebase
+  if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+    try {
+      const storeId = FirebaseService.currentStore.id;
+      await FirebaseService.db
+        .collection("stores")
+        .doc(storeId)
+        .collection("categories")
+        .doc(id.toString())
+        .set({
+          ...categories[index],
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      console.log("✅ Category updated in Firebase");
+    } catch (error) {
+      console.error("Error syncing category:", error);
+      if (window.SyncManager) {
+        SyncManager.queueOperation('category', categories[index]);
+      }
     }
-
-    const category = categories[index];
-
-    // Check if protected
-    if (category.protected) {
-      Utils.showToast("ไม่สามารถแก้ไขหมวดหมู่นี้ได้", "error");
-      return false;
+  } else {
+    if (window.SyncManager) {
+      SyncManager.queueOperation('category', categories[index]);
     }
+  }
 
-    // Update category
-    categories[index] = {
-      ...category,
-      ...updates,
-      updatedAt: Date.now(),
-    };
-
-    App.saveData();
-    Utils.showToast(`แก้ไขหมวดหมู่ "${category.name}" สำเร็จ`, "success");
-    return categories[index];
-  },
+  Utils.showToast(`แก้ไขหมวดหมู่ "${category.name}" สำเร็จ`, "success");
+  return categories[index];
+},
 
   // Delete category
-  delete(id) {
-    const categories = this.getAll();
-    const category = this.getById(id);
+  async delete(id) {
+  const categories = this.getAll();
+  const category = this.getById(id);
 
-    if (!category) {
-      Utils.showToast("ไม่พบหมวดหมู่ที่ต้องการลบ", "error");
-      return false;
-    }
+  if (!category) {
+    Utils.showToast("ไม่พบหมวดหมู่ที่ต้องการลบ", "error");
+    return false;
+  }
 
-    // Check if protected
-    if (category.protected) {
-      Utils.showToast("ไม่สามารถลบหมวดหมู่นี้ได้", "error");
-      return false;
-    }
+  if (category.protected) {
+    Utils.showToast("ไม่สามารถลบหมวดหมู่นี้ได้", "error");
+    return false;
+  }
 
-    // Check if has products
-    const productsInCategory = App.getProducts().filter(
-      (p) => p.category === id
+  const productsInCategory = App.getProducts().filter((p) => p.category === id);
+  if (productsInCategory.length > 0) {
+    Utils.showToast(
+      `ไม่สามารถลบได้ เนื่องจากมีสินค้า ${productsInCategory.length} รายการในหมวดหมู่นี้`,
+      "error"
     );
-    if (productsInCategory.length > 0) {
-      Utils.showToast(
-        `ไม่สามารถลบได้ เนื่องจากมีสินค้า ${productsInCategory.length} รายการในหมวดหมู่นี้`,
-        "error"
-      );
-      return false;
-    }
+    return false;
+  }
 
-    // Confirm deletion
-    Utils.confirm(`ต้องการลบหมวดหมู่ "${category.name}" ใช่หรือไม่?`, () => {
+  Utils.confirm(`ต้องการลบหมวดหมู่ "${category.name}" ใช่หรือไม่?`, async () => {
+    try {
       // Remove from state
       App.state.categories = categories.filter((cat) => cat.id !== id);
-      App.saveData();
+      App.saveData(true);
+
+      // Delete from Firebase
+      if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+        const storeId = FirebaseService.currentStore.id;
+        await FirebaseService.db
+          .collection("stores")
+          .doc(storeId)
+          .collection("categories")
+          .doc(id.toString())
+          .delete();
+        console.log("✅ Category deleted from Firebase");
+      } else {
+        if (window.SyncManager) {
+          SyncManager.queueOperation('categoryDelete', { id: id });
+        }
+      }
 
       Utils.showToast(`ลบหมวดหมู่ "${category.name}" สำเร็จ`, "success");
 
-      // Refresh UI if on categories page
       if (BackOffice.currentPage === "categories") {
         BackOffice.loadCategoriesList();
       }
-    });
-  },
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      App.loadData(); // Reload data on error
+      Utils.showToast("เกิดข้อผิดพลาดในการลบหมวดหมู่", "error");
+    }
+  });
+},
 
   // Get products count by category
   getProductsCount(categoryId) {
