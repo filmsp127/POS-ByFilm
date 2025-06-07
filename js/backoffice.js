@@ -920,7 +920,7 @@ const BackOffice = {
     <button type="button" onclick="event.stopPropagation(); BackOffice.deleteProduct(${
       product.id
     })" class="inline-flex items-center justify-center w-10 h-10 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition">
-     <i class="fas fa-trash"></i>
+      <i class="fas fa-trash pointer-events-none"></i>
     </button>
   </div>
 </td>
@@ -1136,7 +1136,7 @@ const BackOffice = {
     }
 
     document.getElementById("productModal").classList.remove("hidden");
-}
+  },
 
   deleteProduct(id) {
     Utils.confirm("ต้องการลบสินค้านี้?", () => {
@@ -1230,10 +1230,10 @@ const BackOffice = {
                 <td class="p-3 text-center" style="min-width: 120px;">
   <div class="flex justify-center gap-1">
     <button type="button" onclick="event.stopPropagation(); BackOffice.editProduct(${product.id})" class="inline-flex items-center justify-center w-10 h-10 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition">
-      <i class="fas fa-edit"></i>
+      <i class="fas fa-edit pointer-events-none"></i>
     </button>
     <button type="button" onclick="event.stopPropagation(); BackOffice.deleteProduct(${product.id})" class="inline-flex items-center justify-center w-10 h-10 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition">
-      <i class="fas fa-trash"></i>
+      <i class="fas fa-trash pointer-events-none"></i>
     </button>
   </div>
 </td>
