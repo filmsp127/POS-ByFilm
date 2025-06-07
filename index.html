@@ -1079,7 +1079,7 @@ body.modal-open {
   /* Safari status bar และ notch fix */
 @supports (padding: env(safe-area-inset-top)) {
   body {
-    padding-top: env(safe-area-inset-top);
+    padding-top: 0; /* เปลี่ยนจาก env(safe-area-inset-top) เป็น 0 */
   }
   
   .fixed.inset-0 {
