@@ -97,9 +97,9 @@ button, .btn, a.button {
   }
   
   /* ปรับ grid เป็น 1 column บนมือถือ */
-  /* .grid-cols-2 {
+  .grid-cols-2 {
     grid-template-columns: 1fr !important;
-  } */
+  }
   
   /* Table responsive */
   .data-table-wrapper {
@@ -371,18 +371,15 @@ body.modal-open {
   }
 
   /* Menu Icon Button */
-.menu-btn {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.9));
-  border: 2px solid rgba(99, 102, 241, 0.2);
-  color: #667eea;
-  border-radius: 15px;
-  padding: 10px;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(5px);
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-}
+  .menu-btn {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.9));
+    border: 2px solid rgba(99, 102, 241, 0.2);
+    color: #667eea;
+    border-radius: 15px;
+    padding: 10px;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(5px);
+  }
 
   .menu-btn:hover {
     background: linear-gradient(135deg, #667eea, #764ba2);
@@ -774,21 +771,13 @@ body.modal-open {
   }
 }
   @media (max-width: 640px) {
-  .product-card {
-    padding: 8px;
-  }
+    .product-card {
+      padding: 12px;
+    }
 
-  .product-card .text-5xl {
-    font-size: 1.5rem;
-  }
-  
-  .product-card h4 {
-    font-size: 0.75rem;
-  }
-  
-  .product-card .text-2xl {
-    font-size: 1.25rem;
-  }
+    .product-card .text-5xl {
+      font-size: 2rem;
+    }
 
     .category-tab {
       padding: 8px 16px;
@@ -882,10 +871,10 @@ body.modal-open {
       <i class="fas fa-bars text-lg sm:text-xl"></i>
     </button>
 
-    <!-- User Button - แสดงบนมือถือด้วย -->
-<button onclick="App.showUserMenu()" class="user-btn">
-  <i class="fas fa-user text-lg sm:text-xl"></i>
-</button>
+    <!-- User Button -->
+    <button onclick="App.showUserMenu()" class="user-btn hidden sm:block">
+      <i class="fas fa-user text-lg sm:text-xl"></i>
+    </button>
     
     <!-- Sync Status - ซ่อนบนมือถือ -->
     <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-white/80 backdrop-filter backdrop-blur-sm rounded-lg text-sm border border-purple-200">
@@ -938,21 +927,21 @@ body.modal-open {
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <!-- Core Scripts -->
-<script src="js/utils.js"></script>
-<script src="js/config.js"></script>
-<script src="js/state.js"></script>
-<script src="js/firebase.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/sync-manager.js"></script>
-<script src="js/app.js"></script>
-<script src="js/pos.js"></script>
-<script src="js/cart.js"></script>
-<script src="js/payment.js"></script>
-<script src="js/products.js"></script>
-<script src="js/categories.js"></script>
-<script src="js/backoffice.js"></script>
-<script src="js/reports.js"></script>
-<script src="js/settings.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/firebase.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/sync-manager.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/pos.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/payment.js"></script>
+    <script src="js/products.js"></script>
+    <script src="js/categories.js"></script>
+    <script src="js/backoffice.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/settings.js"></script>
 
     <!-- Initialize App -->
     <script>
@@ -974,65 +963,15 @@ body.modal-open {
       });
     </script>
     <script>
-  // Enhanced error handling and module check
-  window.addEventListener('DOMContentLoaded', function() {
-    setTimeout(() => {
-      // Check if all modules are loaded
-      const modules = ['Utils', 'Config', 'App', 'POS', 'Cart', 'Payment', 'Products', 'Categories', 'BackOffice', 'Reports', 'Settings'];
-      const missingModules = [];
-      
-      modules.forEach(module => {
-        if (typeof window[module] === 'undefined') {
-          missingModules.push(module);
-          console.error(`Module ${module} not loaded`);
-        }
-      });
-      
-      if (missingModules.length > 0) {
-        console.error('Missing modules:', missingModules);
-        
-        // Create BackOffice if missing
-        if (typeof BackOffice === 'undefined') {
-          window.BackOffice = {
-            openMenu: function() {
-              console.log('Attempting to load BackOffice...');
-              // Try to reload the script
-              const script = document.createElement('script');
-              script.src = 'js/backoffice.js';
-              script.onload = function() {
-                console.log('BackOffice reloaded');
-                if (typeof BackOffice !== 'undefined' && BackOffice.openMenu) {
-                  BackOffice.openMenu();
-                }
-              };
-              document.head.appendChild(script);
-            },
-            
-            // Add other necessary methods
-            openPage: function(page) { console.log('openPage:', page); },
-            currentPage: null,
-            init: function() { console.log('BackOffice init'); }
-          };
-        }
-      } else {
-        console.log('All modules loaded successfully');
+      // Temporary fix
+      if (typeof BackOffice === 'undefined') {
+        console.error('BackOffice not loaded, creating temporary fix');
+        window.BackOffice = {
+          openMenu: function() {
+            alert('BackOffice module not loaded properly');
+          }
+        };
       }
-    }, 1000); // Wait 1 second to ensure all scripts are loaded
-  });
-</script>
-    <script>
-  // Force initialization on desktop
-  if (window.innerWidth > 768) {
-    window.addEventListener('load', function() {
-      setTimeout(() => {
-        // Ensure BackOffice is available
-        if (typeof BackOffice !== 'undefined' && typeof BackOffice.init === 'function') {
-          BackOffice.init();
-          console.log('BackOffice initialized for desktop');
-        }
-      }, 500);
-    });
-  }
-</script>
+    </script>
   </body>
 </html>
