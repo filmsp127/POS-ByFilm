@@ -103,30 +103,32 @@ const Payment = {
   },
 
   createPaymentModal() {
-    // สร้างรายการสินค้า
-    let itemsList = "";
-    this.currentSale.items.forEach((item) => {
-      itemsList += `
-        <div class="flex justify-between items-center py-2 border-b border-gray-200">
-          <div class="flex-1">
-            <span class="text-gray-800">${item.name}</span>
-            <span class="text-gray-500 text-sm ml-2">x${item.quantity}</span>
-          </div>
-          <span class="text-gray-800 font-medium">${Utils.formatCurrency(
-            item.price * item.quantity
-          )}</span>
+  // สร้างรายการสินค้า
+  let itemsList = "";
+  this.currentSale.items.forEach((item) => {
+    itemsList += `
+      <div class="flex justify-between items-center py-2 border-b border-gray-200">
+        <div class="flex-1">
+          <span class="text-gray-800 text-sm">${item.name}</span>
+          <span class="text-gray-500 text-xs ml-2">x${item.quantity}</span>
         </div>
-      `;
-    });
+        <span class="text-gray-800 font-medium text-sm">${Utils.formatCurrency(
+          item.price * item.quantity
+        )}</span>
+      </div>
+    `;
+  });
 
-    const content = `
-      <div class="modal-container">
-        <div class="modal-header">
-          <h3 class="text-xl font-bold text-gray-800">ชำระเงิน</h3>
-          <button onclick="Payment.cancel()" class="modal-close-btn">
-            <i class="fas fa-times"></i>
+  const content = `
+    <div class="modal-with-footer h-full flex flex-col">
+      <div class="modal-header bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-bold">ชำระเงิน</h3>
+          <button onclick="Payment.cancel()" class="w-10 h-10 flex items-center justify-center hover:bg-white/20 rounded-lg transition">
+            <i class="fas fa-times text-xl"></i>
           </button>
         </div>
+      </div>
         <div class="modal-body">
           <!-- Items List -->
           <div class="bg-gray-50 rounded-lg p-4 mb-4 max-h-32 overflow-y-auto">
@@ -223,25 +225,27 @@ const Payment = {
           </div>
         </div>
         <!-- ปิด modal-body -->
-        
-        <div class="modal-footer surface-white">
-          <div class="grid grid-cols-2 gap-3">
-            <button onclick="Payment.cancel()" 
-                    class="bg-gradient-to-br from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 py-3 rounded-lg text-gray-800 font-medium transition shadow">
-              ยกเลิก
-            </button>
-            <button onclick="Payment.confirm()" id="confirmPaymentBtn" 
-                    class="btn-primary py-3 rounded-lg text-white font-medium shadow-lg" disabled>
-              ยืนยันชำระเงิน
-            </button>
-          </div>
+      </div>
+      
+      <div class="modal-footer">
+        <div class="grid grid-cols-2 gap-3">
+          <button onclick="Payment.cancel()" 
+                  class="bg-gradient-to-br from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 py-3 rounded-lg text-gray-800 font-medium transition shadow">
+            ยกเลิก
+          </button>
+          <button onclick="Payment.confirm()" id="confirmPaymentBtn" 
+                  class="btn-primary py-3 rounded-lg text-white font-medium shadow-lg" disabled>
+            ยืนยันชำระเงิน
+          </button>
         </div>
       </div>
-    `;
+    </div>
+  `;
 
-    this.modal = Utils.createModal(content, {
-      size: "w-full max-w-lg h-[90vh] flex flex-col",
-    });
+  this.modal = Utils.createModal(content, {
+    size: "w-full max-w-lg",
+    mobileFullscreen: true
+  });
 
     // แสดง QR Code ถ้ามี
     this.loadSavedQRCode();
