@@ -64,74 +64,84 @@ const Utils = {
   },
 
   // Create modal
-  createModal(content, options = {}) {
-    const modal = document.createElement("div");
-    modal.className =
-      "fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4";
-    
-    // Check if mobile
-    const isMobile = window.innerWidth <= 640;
-    const sizeClass = options.size || "w-full max-w-md";
-    
-    // Add mobile fullscreen class if needed
-    const modalClass = isMobile && options.mobileFullscreen !== false 
-      ? `${sizeClass} mobile-fullscreen` 
-      : sizeClass;
-    
-    // Check if content has modal structure
-    const hasModalStructure = content.includes('modal-with-footer') || 
-                            content.includes('modal-body') || 
-                            content.includes('modal-footer');
-    
-    if (hasModalStructure) {
-      // Content already has proper structure
-      modal.innerHTML = `
-        <div class="bg-white rounded-xl shadow-2xl ${modalClass} modal-content">
+createModal(content, options = {}) {
+  const modal = document.createElement("div");
+  modal.className = "fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4";
+  
+  // Check if mobile
+  const isMobile = window.innerWidth <= 640;
+  const sizeClass = options.size || "w-full max-w-md";
+  
+  // สำหรับ modal ที่ต้องการเต็มจอบนมือถือ
+  const modalClass = isMobile && options.mobileFullscreen !== false 
+    ? "w-full h-full max-w-full max-h-full m-0 rounded-none" 
+    : sizeClass;
+  
+  // เพิ่ม max-height และ flex สำหรับ modal ทั่วไป
+  const heightClass = modalClass.includes('h-full') ? '' : 'max-h-[90vh]';
+  
+  // Check if content has modal structure
+  const hasModalStructure = content.includes('modal-with-footer') || 
+                          content.includes('modal-body') || 
+                          content.includes('modal-footer');
+  
+  if (hasModalStructure) {
+    // Content already has proper structure
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-2xl ${modalClass} ${heightClass} flex flex-col overflow-hidden">
+        ${content}
+      </div>
+    `;
+  } else {
+    // Wrap content in proper structure
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-2xl ${modalClass} ${heightClass} flex flex-col overflow-hidden">
+        <div class="flex-1 overflow-y-auto">
           ${content}
         </div>
-      `;
-    } else {
-      // Wrap content in proper structure
-      modal.innerHTML = `
-        <div class="bg-white rounded-xl shadow-2xl ${modalClass} modal-content modal-with-footer">
-          <div class="modal-body">
-            ${content}
-          </div>
-        </div>
-      `;
-    }
+      </div>
+    `;
+  }
 
-    if (options.closeOnClick !== false) {
-      modal.addEventListener("click", (e) => {
-        if (e.target === modal) {
-          modal.remove();
-        }
-      });
-    }
+  // ป้องกันการปิด modal โดยไม่ตั้งใจบนมือถือ
+  if (options.closeOnClick !== false) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal && !isMobile) {
+        modal.remove();
+      }
+    });
+  }
 
-    document.getElementById("modalsContainer").appendChild(modal);
+  document.getElementById("modalsContainer").appendChild(modal);
+  
+  // Focus management และป้องกัน body scroll
+  if (isMobile) {
+    document.body.style.overflow = 'hidden';
     
-    // Focus management for mobile
-    if (isMobile) {
-      // Find first input and focus it after a delay
-      setTimeout(() => {
-        const firstInput = modal.querySelector('input:not([type="hidden"]), textarea, select');
-        if (firstInput) {
-          firstInput.focus();
-        }
-      }, 100);
-    }
-    
-    return modal;
-  },
+    // Find first input and focus it after a delay
+    setTimeout(() => {
+      const firstInput = modal.querySelector('input:not([type="hidden"]), textarea, select');
+      if (firstInput && !firstInput.readOnly) {
+        firstInput.focus();
+        // Scroll to input if needed
+        firstInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 300);
+  }
+  
+  return modal;
+},
 
-  // Close modal
-  closeModal(modal) {
-    if (modal) {
-      modal.style.opacity = "0";
-      setTimeout(() => modal.remove(), 300);
-    }
-  },
+// Close modal
+closeModal(modal) {
+  if (modal) {
+    // Re-enable body scroll
+    document.body.style.overflow = '';
+    
+    modal.style.opacity = "0";
+    setTimeout(() => modal.remove(), 300);
+  }
+},
 
   // Confirm dialog
   confirm(message, onConfirm, onCancel) {
