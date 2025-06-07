@@ -45,6 +45,87 @@
   }
 
   /* Modal Container - ปรับปรุงสำหรับมือถือ */
+  /* Modal Header สำหรับทุก modal */
+.modal-header {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Modal Body ที่ scroll ได้ */
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 1.5rem;
+  /* เพิ่ม padding bottom สำหรับ iOS */
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+}
+
+/* Modal Footer ที่ติดด้านล่าง */
+.modal-footer {
+  flex-shrink: 0;
+  background: linear-gradient(to top, rgba(255,255,255,1), rgba(255,255,255,0.95));
+  border-top: 1px solid rgba(99, 102, 241, 0.2);
+  padding: 1rem 1.5rem;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  box-shadow: 0 -2px 15px rgba(99, 102, 241, 0.1);
+  /* Safe area for iPhone */
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+/* Touch targets ขนาดใหญ่ขึ้น */
+button, .btn, a.button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Input fields บนมือถือ */
+@media (max-width: 640px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important; /* ป้องกัน iOS zoom */
+    padding: 12px !important;
+  }
+  
+  /* ปรับ grid เป็น 1 column บนมือถือ */
+  .grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Table responsive */
+  .data-table-wrapper {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* ปรับขนาด text และ spacing */
+  .text-2xl {
+    font-size: 1.5rem !important;
+  }
+  
+  .text-xl {
+    font-size: 1.25rem !important;
+  }
+  
+  .p-6 {
+    padding: 1rem !important;
+  }
+}
+
+/* ป้องกัน body scroll เมื่อ modal เปิด */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
   .modal-content {
     max-height: calc(100vh - 2rem);
     overflow: hidden;
