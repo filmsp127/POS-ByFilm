@@ -912,15 +912,13 @@ const BackOffice = {
         </td>
         <td class="p-3 text-center" style="min-width: 120px;">
   <div class="flex justify-center gap-1">
-    <button type="button" onclick="event.stopPropagation(); BackOffice.editProduct(${
-      product.id
-    })" class="inline-flex items-center justify-center w-10 h-10 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition">
+    <button type="button" onclick="BackOffice.editProduct(${product.id})" 
+            class="inline-flex items-center justify-center w-10 h-10 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition">
       <i class="fas fa-edit"></i>
     </button>
-    <button type="button" onclick="event.stopPropagation(); BackOffice.deleteProduct(${
-      product.id
-    })" class="inline-flex items-center justify-center w-10 h-10 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition">
-     <i class="fas fa-trash"></i>
+    <button type="button" onclick="BackOffice.deleteProduct(${product.id})" 
+            class="inline-flex items-center justify-center w-10 h-10 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition">
+      <i class="fas fa-trash"></i>
     </button>
   </div>
 </td>
@@ -1040,6 +1038,17 @@ const BackOffice = {
     document.getElementById("productImageUrl").value = "";
     document.getElementById("productImageFile").value = "";
   },
+  handleImageUrl(url) {
+  if (!url) return;
+  
+  document.getElementById("productImage").value = url;
+  document.getElementById("productImageType").value = "url";
+  this.updateImagePreview(url, "url");
+  
+  // Clear other inputs
+  document.getElementById("productEmoji").value = "";
+  document.getElementById("productImageFile").value = "";
+},
 
   updateImagePreview(image, type) {
     const previewContent = document.getElementById("previewContent");
@@ -1115,28 +1124,43 @@ const BackOffice = {
 },
 
   editProduct(id) {
-    const product = App.getProductById(id);
-    if (!product) return;
+  console.log("Editing product:", id); // เพิ่ม log เพื่อ debug
+  
+  const product = App.getProductById(id);
+  if (!product) {
+    console.error("Product not found:", id);
+    return;
+  }
 
-    document.getElementById("editProductId").value = product.id;
-    document.getElementById("productCode").value = product.code || "";
-    document.getElementById("productName").value = product.name;
-    document.getElementById("productPrice").value = product.price;
-    document.getElementById("productCost").value = product.cost || "";
-    document.getElementById("productStock").value = product.stock;
-    document.getElementById("productCategory").value = product.category;
-    document.getElementById("productBarcode").value = product.barcode || "";
+  // ตรวจสอบว่า modal element มีอยู่
+  const modal = document.getElementById("productModal");
+  if (!modal) {
+    console.error("Product modal not found");
+    return;
+  }
 
-    if (product.imageType === "url") {
-      document.getElementById("productImageUrl").value = product.image;
-      this.handleImageUrl(product.image);
-    } else {
-      document.getElementById("productEmoji").value = product.image;
-      this.handleEmoji(product.image);
-    }
+  // Set form values
+  document.getElementById("editProductId").value = product.id;
+  document.getElementById("productCode").value = product.code || "";
+  document.getElementById("productName").value = product.name;
+  document.getElementById("productPrice").value = product.price;
+  document.getElementById("productCost").value = product.cost || "";
+  document.getElementById("productStock").value = product.stock;
+  document.getElementById("productCategory").value = product.category;
+  document.getElementById("productBarcode").value = product.barcode || "";
 
-    document.getElementById("productModal").classList.remove("hidden");
-  },
+    // Handle image
+  if (product.imageType === "url") {
+    document.getElementById("productImageUrl").value = product.image || "";
+    this.handleImageUrl(product.image);
+  } else {
+    document.getElementById("productEmoji").value = product.image || "";
+    this.handleEmoji(product.image);
+  }
+
+  // Show modal
+  modal.classList.remove("hidden");
+},
 
   deleteProduct(id) {
     Utils.confirm("ต้องการลบสินค้านี้?", () => {
