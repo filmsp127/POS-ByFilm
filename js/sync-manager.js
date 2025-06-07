@@ -208,6 +208,10 @@ const SyncManager = {
         }, { merge: true });
         break;
         
+      case 'categoryDelete':
+        await storeRef.collection('categories').doc(item.data.id.toString()).delete();
+        break;
+        
       case 'productDelete':
         await storeRef.collection('products').doc(item.data.id.toString()).delete();
         break;
