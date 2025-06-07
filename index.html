@@ -1020,5 +1020,19 @@ body.modal-open {
     }, 1000); // Wait 1 second to ensure all scripts are loaded
   });
 </script>
+    <script>
+  // Force initialization on desktop
+  if (window.innerWidth > 768) {
+    window.addEventListener('load', function() {
+      setTimeout(() => {
+        // Ensure BackOffice is available
+        if (typeof BackOffice !== 'undefined' && typeof BackOffice.init === 'function') {
+          BackOffice.init();
+          console.log('BackOffice initialized for desktop');
+        }
+      }, 500);
+    });
+  }
+</script>
   </body>
 </html>
