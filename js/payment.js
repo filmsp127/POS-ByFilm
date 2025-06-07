@@ -4,11 +4,16 @@ const Payment = {
   paymentMethod: null,
 
   init() {
-    // Initialize payment methods
     console.log("Payment module initialized");
   },
 
   open(items, subtotal, discount, total, memberId) {
+    // เพิ่มการเช็คว่าเปิดรอบหรือยัง
+    if (window.ShiftManager && !ShiftManager.isShiftOpen()) {
+      Utils.showToast("กรุณาเปิดรอบก่อนทำการขาย", "error");
+      return;
+    }
+
     this.currentSale = {
       items,
       subtotal,
