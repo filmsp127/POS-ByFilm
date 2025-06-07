@@ -1431,17 +1431,18 @@ const BackOffice = {
     Utils.createModal(content, { size: "w-full max-w-md" });
   },
 
-  saveMember(event) {
-    event.preventDefault();
+  async saveMember(event) {
+  event.preventDefault();
 
-    const memberId = document.getElementById("editMemberId").value;
-    const memberData = {
-      name: document.getElementById("memberName").value,
-      phone: document.getElementById("memberPhone").value,
-      email: document.getElementById("memberEmail").value,
-      birthdate: document.getElementById("memberBirthdate").value,
-    };
+  const memberId = document.getElementById("editMemberId").value;
+  const memberData = {
+    name: document.getElementById("memberName").value,
+    phone: document.getElementById("memberPhone").value,
+    email: document.getElementById("memberEmail").value,
+    birthdate: document.getElementById("memberBirthdate").value,
+  };
 
+  try {
     if (!memberId) {
       // Add new member
       memberData.id = Date.now();
@@ -1451,6 +1452,26 @@ const BackOffice = {
 
       if (!App.state.members) App.state.members = [];
       App.state.members.push(memberData);
+      
+      // Sync to Firebase
+      if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+        const storeId = FirebaseService.currentStore.id;
+        await FirebaseService.db
+          .collection("stores")
+          .doc(storeId)
+          .collection("members")
+          .doc(memberData.id.toString())
+          .set({
+            ...memberData,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        console.log("✅ Member synced to Firebase");
+      } else {
+        if (window.SyncManager) {
+          SyncManager.queueOperation('member', memberData);
+        }
+      }
+      
       Utils.showToast("เพิ่มสมาชิกสำเร็จ", "success");
     } else {
       // Update existing member
@@ -1460,14 +1481,38 @@ const BackOffice = {
           ...App.state.members[index],
           ...memberData,
         };
+        
+        // Sync to Firebase
+        if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+          const storeId = FirebaseService.currentStore.id;
+          await FirebaseService.db
+            .collection("stores")
+            .doc(storeId)
+            .collection("members")
+            .doc(memberId.toString())
+            .set({
+              ...App.state.members[index],
+              lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          console.log("✅ Member updated in Firebase");
+        } else {
+          if (window.SyncManager) {
+            SyncManager.queueOperation('member', App.state.members[index]);
+          }
+        }
+        
         Utils.showToast("แก้ไขข้อมูลสมาชิกสำเร็จ", "success");
       }
     }
 
-    App.saveData();
+    App.saveData(true); // Skip Firebase sync in saveData
     this.loadMembersList();
     Utils.closeModal(event.target.closest(".fixed"));
-  },
+  } catch (error) {
+    console.error("Error saving member:", error);
+    Utils.showToast("เกิดข้อผิดพลาดในการบันทึกข้อมูล", "error");
+  }
+},
 
   editMember(id) {
     const member = App.state.members.find((m) => m.id == id);
@@ -1542,14 +1587,37 @@ const BackOffice = {
     Utils.createModal(content, { size: "w-full max-w-md" });
   },
 
-  deleteMember(id) {
-    Utils.confirm("ต้องการลบสมาชิกนี้?", () => {
+  async deleteMember(id) {
+  Utils.confirm("ต้องการลบสมาชิกนี้?", async () => {
+    try {
       App.state.members = App.state.members.filter((m) => m.id != id);
-      App.saveData();
+      App.saveData(true);
+
+      // Delete from Firebase
+      if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+        const storeId = FirebaseService.currentStore.id;
+        await FirebaseService.db
+          .collection("stores")
+          .doc(storeId)
+          .collection("members")
+          .doc(id.toString())
+          .delete();
+        console.log("✅ Member deleted from Firebase");
+      } else {
+        if (window.SyncManager) {
+          SyncManager.queueOperation('memberDelete', { id: id });
+        }
+      }
+
       this.loadMembersList();
       Utils.showToast("ลบสมาชิกสำเร็จ", "success");
-    });
-  },
+    } catch (error) {
+      console.error("Error deleting member:", error);
+      App.loadData(); // Reload on error
+      Utils.showToast("เกิดข้อผิดพลาดในการลบสมาชิก", "error");
+    }
+  });
+},
 
   // Sales History Functions
   loadSalesHistory() {
@@ -1993,32 +2061,48 @@ const BackOffice = {
     reader.readAsDataURL(file);
   },
 
-  saveSettings() {
+  async saveSettings() {
+  try {
     const updates = {
       storeName: document.getElementById("storeName").value,
       storeAddress: document.getElementById("storeAddress").value,
       storePhone: document.getElementById("storePhone").value,
       promptpay: document.getElementById("storePromptPay").value,
       tax: parseFloat(document.getElementById("taxRate").value),
-      memberDiscount: parseFloat(
-        document.getElementById("memberDiscount").value
-      ),
+      memberDiscount: parseFloat(document.getElementById("memberDiscount").value),
       pointRate: parseInt(document.getElementById("pointRate").value),
     };
 
     // Receipt settings
     if (!updates.receipt) updates.receipt = {};
-    updates.receipt.footerMessage = document.getElementById(
-      "receiptFooterMessage"
-    ).value;
-    updates.receipt.showPhone =
-      document.getElementById("showStorePhone").checked;
+    updates.receipt.footerMessage = document.getElementById("receiptFooterMessage").value;
+    updates.receipt.showPhone = document.getElementById("showStorePhone").checked;
     updates.receipt.showLogo = document.getElementById("showStoreLogo").checked;
 
     App.updateSettings(updates);
-    Utils.showToast("บันทึกการตั้งค่าสำเร็จ", "success");
-  },
 
+    // Sync to Firebase
+    if (window.FirebaseService && FirebaseService.isAuthenticated() && FirebaseService.currentStore) {
+      const storeId = FirebaseService.currentStore.id;
+      await FirebaseService.db
+        .collection("stores")
+        .doc(storeId)
+        .update({
+          name: updates.storeName,
+          address: updates.storeAddress,
+          phone: updates.storePhone,
+          settings: App.getSettings(),
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      console.log("✅ Settings synced to Firebase");
+    }
+
+    Utils.showToast("บันทึกการตั้งค่าสำเร็จ", "success");
+  } catch (error) {
+    console.error("Error saving settings:", error);
+    Utils.showToast("เกิดข้อผิดพลาดในการบันทึกการตั้งค่า", "error");
+  }
+},
   // Data Management
   backupData() {
     App.exportData();
