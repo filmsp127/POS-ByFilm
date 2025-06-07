@@ -2,7 +2,7 @@
 const Config = {
   // App Settings
   app: {
-    name: "Modern POS",
+    name: "SP24 POS",
     version: "1.0.0",
     debug: false,
   },
