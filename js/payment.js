@@ -120,121 +120,124 @@ const Payment = {
     });
 
     const content = `
-            <div class="h-full flex flex-col">
-                <div class="flex-1 overflow-y-auto p-6">
-                    <!-- Header -->
-                    <h3 class="text-2xl font-bold text-gray-800 text-center mb-6">ชำระเงิน</h3>
-                    
-                    <!-- Items List -->
-                    <div class="bg-gray-50 rounded-lg p-4 mb-4 max-h-32 overflow-y-auto">
-                      <h4 class="font-medium text-gray-700 mb-2">รายการสินค้า</h4>
-                      ${itemsList}
-                    </div>
-                    
-                    <!-- Total Amount -->
-                    <div class="text-center mb-6 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
-                        <div class="text-4xl font-bold" id="paymentAmount">
-                            ${Utils.formatCurrency(this.currentSale.total)}
-                        </div>
-                        <div class="text-sm opacity-90 mt-1">ยอดที่ต้องชำระ</div>
-                    </div>
-
-                    <!-- Payment Methods -->
-                    <div class="grid grid-cols-2 gap-4 mb-6">
-                        <button onclick="Payment.selectMethod('cash')" id="cashMethodBtn"
-                                class="payment-method bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 p-6 rounded-xl text-center hover:border-green-500 hover:shadow-lg transition">
-                            <i class="fas fa-money-bill-wave text-4xl text-green-600 mb-2"></i>
-                            <div class="text-gray-800 font-medium">เงินสด</div>
-                        </button>
-                        <button onclick="Payment.selectMethod('transfer')" id="transferMethodBtn"
-                                class="payment-method bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 p-6 rounded-xl text-center hover:border-blue-500 hover:shadow-lg transition">
-                            <i class="fas fa-mobile-alt text-4xl text-blue-600 mb-2"></i>
-                            <div class="text-gray-800 font-medium">โอนเงิน</div>
-                        </button>
-                    </div>
-
-                    <!-- Cash Section -->
-                    <div id="cashSection" class="hidden space-y-4 mb-6">
-                        <div>
-                            <label class="text-gray-700 text-sm mb-2 block font-medium">จำนวนเงินที่รับ</label>
-                            <input type="number" id="receivedAmount" 
-                                   class="w-full p-4 text-2xl text-center bg-gray-50 rounded-lg text-gray-800 border-2 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200"
-                                   placeholder="0.00" onkeyup="Payment.calculateChange()">
-                        </div>
-                        <div class="bg-green-50 rounded-lg p-4">
-                            <div class="flex justify-between text-xl">
-                                <span class="text-gray-700">เงินทอน</span>
-                                <span id="changeAmount" class="font-bold text-green-600">฿0.00</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Quick cash buttons -->
-                        <div class="grid grid-cols-5 gap-2">
-                            ${[20, 50, 100, 500, 1000]
-                              .map(
-                                (amount) => `
-                                <button onclick="Payment.setQuickCash(${amount})" 
-                                        class="bg-gradient-to-br from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 py-2 rounded text-gray-700 font-medium transition shadow">
-                                    ${amount}
-                                </button>
-                            `
-                              )
-                              .join("")}
-                        </div>
-                    </div>
-
-                    <!-- Transfer Section -->
-                    <div id="transferSection" class="hidden space-y-4 mb-6">
-                        <div class="text-center bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6">
-                            <div class="text-gray-700 mb-4 font-medium">สแกน QR Code เพื่อโอนเงิน</div>
-                            
-                            <!-- QR Code Display -->
-                            <div class="bg-white p-4 rounded-lg inline-block shadow-md mb-4" id="qrCodeContainer">
-                                <div id="qrCodeDisplay" class="w-48 h-48 flex items-center justify-center text-gray-400">
-                                    <i class="fas fa-qrcode text-6xl"></i>
-                                </div>
-                            </div>
-                            
-                            <div class="text-gray-600 text-sm mb-4">
-                                PromptPay: <span id="promptPayNumber">${
-                                  App.getSettings().promptpay ||
-                                  "ยังไม่ได้ตั้งค่า"
-                                }</span>
-                            </div>
-                            
-                            <!-- Upload QR Code -->
-                            <div class="mb-4">
-                                <input type="file" id="qrCodeUpload" accept="image/*" class="hidden" onchange="Payment.handleQRUpload(event)">
-                                <button onclick="document.getElementById('qrCodeUpload').click()" 
-                                        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
-                                    <i class="fas fa-upload mr-2"></i>อัพโหลด QR Code
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label class="text-gray-700 text-sm mb-2 block font-medium">เลขที่อ้างอิง (ถ้ามี)</label>
-                            <input type="text" id="transferRef" 
-                                   class="w-full p-2 rounded-lg bg-gray-50 border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                                   placeholder="กรอกเลขที่อ้างอิง">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Buttons - ติดด้านล่างตลอด -->
-                <div class="p-6 bg-white border-t border-gray-200">
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="Payment.cancel()" class="bg-gradient-to-br from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 py-3 rounded-lg text-gray-800 font-medium transition shadow">
-                            ยกเลิก
-                        </button>
-                        <button onclick="Payment.confirm()" id="confirmPaymentBtn" 
-                                class="btn-primary py-3 rounded-lg text-white font-medium shadow-lg" disabled>
-                            ยืนยันชำระเงิน
-                        </button>
-                    </div>
-                </div>
+      <div class="modal-container">
+        <div class="modal-header">
+          <h3 class="text-xl font-bold text-gray-800">ชำระเงิน</h3>
+          <button onclick="Payment.cancel()" class="modal-close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <!-- Items List -->
+          <div class="bg-gray-50 rounded-lg p-4 mb-4 max-h-32 overflow-y-auto">
+            <h4 class="font-medium text-gray-700 mb-2">รายการสินค้า</h4>
+            ${itemsList}
+          </div>
+          
+          <!-- Total Amount -->
+          <div class="text-center mb-6 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+            <div class="text-4xl font-bold" id="paymentAmount">
+              ${Utils.formatCurrency(this.currentSale.total)}
             </div>
-        `;
+            <div class="text-sm opacity-90 mt-1">ยอดที่ต้องชำระ</div>
+          </div>
+
+          <!-- Payment Methods -->
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <button onclick="Payment.selectMethod('cash')" id="cashMethodBtn"
+                    class="payment-method bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 p-6 rounded-xl text-center hover:border-green-500 hover:shadow-lg transition">
+              <i class="fas fa-money-bill-wave text-4xl text-green-600 mb-2"></i>
+              <div class="text-gray-800 font-medium">เงินสด</div>
+            </button>
+            <button onclick="Payment.selectMethod('transfer')" id="transferMethodBtn"
+                    class="payment-method bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 p-6 rounded-xl text-center hover:border-blue-500 hover:shadow-lg transition">
+              <i class="fas fa-mobile-alt text-4xl text-blue-600 mb-2"></i>
+              <div class="text-gray-800 font-medium">โอนเงิน</div>
+            </button>
+          </div>
+
+          <!-- Cash Section -->
+          <div id="cashSection" class="hidden space-y-4 mb-6">
+            <div>
+              <label class="text-gray-700 text-sm mb-2 block font-medium">จำนวนเงินที่รับ</label>
+              <input type="number" id="receivedAmount" 
+                     class="w-full p-4 text-2xl text-center bg-gray-50 rounded-lg text-gray-800 border-2 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                     placeholder="0.00" onkeyup="Payment.calculateChange()">
+            </div>
+            <div class="bg-green-50 rounded-lg p-4">
+              <div class="flex justify-between text-xl">
+                <span class="text-gray-700">เงินทอน</span>
+                <span id="changeAmount" class="font-bold text-green-600">฿0.00</span>
+              </div>
+            </div>
+            
+            <!-- Quick cash buttons -->
+            <div class="grid grid-cols-5 gap-2">
+              ${[20, 50, 100, 500, 1000]
+                .map(
+                  (amount) => `
+                  <button onclick="Payment.setQuickCash(${amount})" 
+                          class="bg-gradient-to-br from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 py-2 rounded text-gray-700 font-medium transition shadow">
+                    ${amount}
+                  </button>
+                `
+                )
+                .join("")}
+            </div>
+          </div>
+
+          <!-- Transfer Section -->
+          <div id="transferSection" class="hidden space-y-4 mb-6">
+            <div class="text-center bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6">
+              <div class="text-gray-700 mb-4 font-medium">สแกน QR Code เพื่อโอนเงิน</div>
+              
+              <!-- QR Code Display -->
+              <div class="bg-white p-4 rounded-lg inline-block shadow-md mb-4" id="qrCodeContainer">
+                <div id="qrCodeDisplay" class="w-48 h-48 flex items-center justify-center text-gray-400">
+                  <i class="fas fa-qrcode text-6xl"></i>
+                </div>
+              </div>
+              
+              <div class="text-gray-600 text-sm mb-4">
+                PromptPay: <span id="promptPayNumber">${
+                  App.getSettings().promptpay || "ยังไม่ได้ตั้งค่า"
+                }</span>
+              </div>
+              
+              <!-- Upload QR Code -->
+              <div class="mb-4">
+                <input type="file" id="qrCodeUpload" accept="image/*" class="hidden" onchange="Payment.handleQRUpload(event)">
+                <button onclick="document.getElementById('qrCodeUpload').click()" 
+                        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
+                  <i class="fas fa-upload mr-2"></i>อัพโหลด QR Code
+                </button>
+              </div>
+            </div>
+            
+            <div>
+              <label class="text-gray-700 text-sm mb-2 block font-medium">เลขที่อ้างอิง (ถ้ามี)</label>
+              <input type="text" id="transferRef" 
+                     class="w-full p-2 rounded-lg bg-gray-50 border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                     placeholder="กรอกเลขที่อ้างอิง">
+            </div>
+          </div>
+        </div>
+        <!-- ปิด modal-body -->
+        
+        <div class="modal-footer surface-white">
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="Payment.cancel()" 
+                    class="bg-gradient-to-br from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 py-3 rounded-lg text-gray-800 font-medium transition shadow">
+              ยกเลิก
+            </button>
+            <button onclick="Payment.confirm()" id="confirmPaymentBtn" 
+                    class="btn-primary py-3 rounded-lg text-white font-medium shadow-lg" disabled>
+              ยืนยันชำระเงิน
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
 
     this.modal = Utils.createModal(content, {
       size: "w-full max-w-lg h-[90vh] flex flex-col",
