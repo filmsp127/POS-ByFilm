@@ -725,10 +725,17 @@ body.modal-open {
   /* Responsive Adjustments */
   /* Mobile Top Bar Fix */
 @media (max-width: 640px) {
-  .top-bar {
-    padding: 0.5rem;
-    gap: 0.5rem;
+  #syncStatus {
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
+  .top-bar button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
   
   .menu-btn, .user-btn, .cart-btn {
     padding: 8px;
