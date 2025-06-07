@@ -70,12 +70,13 @@ createModal(content, options = {}) {
   
   // Check if mobile
   const isMobile = window.innerWidth <= 640;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   const sizeClass = options.size || "w-full max-w-md";
   
   // สำหรับ modal ที่ต้องการเต็มจอบนมือถือ
-const modalClass = isMobile && options.mobileFullscreen !== false 
-  ? "w-full h-screen max-w-full max-h-screen m-0 rounded-none" 
-  : sizeClass;
+  const modalClass = isMobile && options.mobileFullscreen !== false 
+    ? "w-full h-screen max-w-full max-h-screen m-0 rounded-none" 
+    : sizeClass;
   
   // เพิ่ม max-height และ flex สำหรับ modal ทั่วไป
   const heightClass = modalClass.includes('h-full') ? '' : 'max-h-[90vh]';
@@ -112,12 +113,35 @@ const modalClass = isMobile && options.mobileFullscreen !== false
     });
   }
 
+  // iOS Safari specific fixes
+  if (isIOS) {
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
+    
+    // Store scroll position
+    const scrollY = window.scrollY;
+    document.body.style.top = `-${scrollY}px`;
+    
+    // Restore scroll position when modal closes
+    modal._restoreScroll = () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      document.body.style.top = '';
+      window.scrollTo(0, scrollY);
+    };
+  } else if (isMobile) {
+    document.body.style.overflow = 'hidden';
+  }
+
   document.getElementById("modalsContainer").appendChild(modal);
   
   // Focus management และป้องกัน body scroll
   if (isMobile) {
-    document.body.style.overflow = 'hidden';
-    
     // Find first input and focus it after a delay
     setTimeout(() => {
       const firstInput = modal.querySelector('input:not([type="hidden"]), textarea, select');
@@ -131,12 +155,20 @@ const modalClass = isMobile && options.mobileFullscreen !== false
   
   return modal;
 },
-
 // Close modal
 closeModal(modal) {
   if (modal) {
-    // Re-enable body scroll
-    document.body.style.overflow = '';
+    // iOS specific scroll restoration
+    if (modal._restoreScroll) {
+      modal._restoreScroll();
+    } else {
+      // Re-enable body scroll
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      document.body.style.top = '';
+    }
     
     modal.style.opacity = "0";
     setTimeout(() => modal.remove(), 300);
