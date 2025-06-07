@@ -22,31 +22,33 @@ const ShiftManager = {
   },
   
   // Setup realtime listener for shifts
-  setupRealtimeListener() {
-    if (!FirebaseService.currentStore) return;
-    
-    // Clean up existing listener
-    if (this.shiftListener) {
-      this.shiftListener();
-      this.shiftListener = null;
-    }
-    
-    const storeId = FirebaseService.currentStore.id;
-    
-    // Listen to open shifts only
-    this.shiftListener = FirebaseService.db
-      .collection('stores')
-      .doc(storeId)
-      .collection('shifts')
-      .where('status', '==', 'open')
-      .onSnapshot((snapshot) => {
-        console.log('📥 Shift changes detected:', snapshot.size);
+setupRealtimeListener() {
+  if (!FirebaseService.currentStore) return;
+  
+  // Clean up existing listener
+  if (this.shiftListener) {
+    this.shiftListener();
+    this.shiftListener = null;
+  }
+  
+  const storeId = FirebaseService.currentStore.id;
+  
+  // Listen to ALL shifts, not just open ones
+  this.shiftListener = FirebaseService.db
+    .collection('stores')
+    .doc(storeId)
+    .collection('shifts')
+    .orderBy('openTime', 'desc')
+    .limit(1)
+    .onSnapshot((snapshot) => {
+      console.log('📥 Shift changes detected:', snapshot.size);
+      
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        const shift = { id: doc.id, ...doc.data() };
         
-        if (!snapshot.empty) {
-          // มีรอบที่เปิดอยู่
-          const doc = snapshot.docs[0];
-          const shift = { id: doc.id, ...doc.data() };
-          
+        // Check if it's an open shift
+        if (shift.status === 'open') {
           // Check if it's our shift or someone else's
           const currentUser = Auth.getCurrentUser();
           const isOurShift = this.currentShift && this.currentShift.id === shift.id;
@@ -60,20 +62,48 @@ const ShiftManager = {
           this.currentShift = shift;
           this.saveCurrentShift();
           this.updateUI();
-        } else {
-          // ไม่มีรอบที่เปิด
-          if (this.currentShift) {
-            console.log('🔄 Shift was closed');
-            Utils.showToast('รอบถูกปิดแล้ว', "info");
-            this.currentShift = null;
-            this.saveCurrentShift();
-            this.updateUI();
-          }
+        } else if (shift.status === 'closed' && this.currentShift && this.currentShift.id === shift.id) {
+          // Our shift was closed
+          console.log('🔄 Shift was closed');
+          Utils.showToast('รอบถูกปิดแล้ว', "info");
+          this.currentShift = null;
+          this.saveCurrentShift();
+          this.updateUI();
         }
-      }, (error) => {
-        console.error('Shift listener error:', error);
-      });
-  },
+      } else if (this.currentShift) {
+        // No shifts found but we had one
+        console.log('🔄 No shifts found');
+        this.currentShift = null;
+        this.saveCurrentShift();
+        this.updateUI();
+      }
+    }, (error) => {
+      console.error('Shift listener error:', error);
+    });
+    
+  // Also check for the latest open shift immediately
+  FirebaseService.db
+    .collection('stores')
+    .doc(storeId)
+    .collection('shifts')
+    .where('status', '==', 'open')
+    .limit(1)
+    .get()
+    .then((snapshot) => {
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        const shift = { id: doc.id, ...doc.data() };
+        
+        if (!this.currentShift || this.currentShift.id !== shift.id) {
+          console.log('📋 Found existing open shift:', shift.employeeName);
+          this.currentShift = shift;
+          this.saveCurrentShift();
+          this.updateUI();
+        }
+      }
+    })
+    .catch(console.error);
+},
   
   // Load current shift from storage
   loadCurrentShift() {
