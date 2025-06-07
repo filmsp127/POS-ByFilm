@@ -53,6 +53,9 @@ const BackOffice = {
                         <a href="#" onclick="BackOffice.openPage('sales')" class="block bg-gradient-to-r from-gray-50 to-gray-100 hover:from-red-50 hover:to-rose-50 p-4 rounded-lg text-gray-800 transition group">
                             <i class="fas fa-receipt mr-3 text-red-500 group-hover:text-red-600"></i>ประวัติการขาย
                         </a>
+<a href="#" onclick="BackOffice.openPage('shifts')" class="block bg-gradient-to-r from-gray-50 to-gray-100 hover:from-purple-50 hover:to-indigo-50 p-4 rounded-lg text-gray-800 transition group">
+    <i class="fas fa-clock mr-3 text-purple-500 group-hover:text-purple-600"></i>รายงานรอบ
+</a>
                         <a href="#" onclick="BackOffice.openPage('reports')" class="block bg-gradient-to-r from-gray-50 to-gray-100 hover:from-indigo-50 hover:to-blue-50 p-4 rounded-lg text-gray-800 transition group">
                             <i class="fas fa-file-alt mr-3 text-indigo-500 group-hover:text-indigo-600"></i>รายงาน
                         </a>
@@ -115,6 +118,9 @@ const BackOffice = {
       case "sales":
         content = this.createSalesPage();
         break;
+        case "shifts":
+  content = this.createShiftsPage();
+  break;
       case "reports":
         content = this.createReportsPage();
         break;
@@ -143,6 +149,9 @@ const BackOffice = {
         case "sales":
           this.loadSalesHistory();
           break;
+          case "shifts":
+  this.loadShiftsList();
+  break;
         case "reports":
           this.initReports();
           break;
@@ -561,6 +570,176 @@ const BackOffice = {
             </div>
         `;
   },
+  // Shifts Page
+createShiftsPage() {
+  return `
+    <div class="min-h-screen p-4">
+      <!-- Header -->
+      <div class="bg-white shadow-md rounded-lg mb-6 p-4 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <button onclick="BackOffice.closePage()" class="text-gray-700 hover:text-gray-900">
+            <i class="fas fa-arrow-left text-xl"></i>
+          </button>
+          <h1 class="text-2xl font-bold text-gray-800">รายงานรอบการขาย</h1>
+        </div>
+        <div class="flex gap-2">
+          <input type="date" id="shiftsDateFilter" class="p-2 rounded-lg border border-gray-300 text-gray-800">
+          <button onclick="BackOffice.filterShiftsByDate()" class="btn-primary px-4 py-2 rounded-lg text-white">
+            <i class="fas fa-search"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Current Shift Status -->
+      <div id="currentShiftStatus" class="mb-6">
+        <!-- Current shift info will be loaded here -->
+      </div>
+
+      <!-- Shifts History -->
+      <div class="space-y-3" id="shiftsList">
+        <!-- Shifts will be loaded here -->
+      </div>
+    </div>
+  `;
+},
+
+// Load shifts list
+loadShiftsList() {
+  // แสดงสถานะรอบปัจจุบัน
+  const currentStatus = document.getElementById('currentShiftStatus');
+  if (currentStatus && window.ShiftManager) {
+    if (ShiftManager.isShiftOpen()) {
+      const shift = ShiftManager.getCurrentShift();
+      currentStatus.innerHTML = `
+        <div class="bg-green-50 border border-green-200 rounded-xl p-4">
+          <h3 class="font-bold text-green-800 mb-3">รอบปัจจุบัน</h3>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <div class="text-sm text-gray-600">พนักงาน</div>
+              <div class="font-medium">${shift.employeeName}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-600">เวลาเปิด</div>
+              <div class="font-medium">${new Date(shift.openTime).toLocaleTimeString('th-TH')}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-600">ระยะเวลา</div>
+              <div class="font-medium">${ShiftManager.getShiftDuration(shift.openTime)}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-600">ยอดขาย</div>
+              <div class="font-medium text-green-600">${Utils.formatCurrency(shift.sales.total)}</div>
+            </div>
+          </div>
+          <div class="mt-4">
+            <button onclick="ShiftManager.showCloseShiftModal()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+              <i class="fas fa-stop mr-2"></i>ปิดรอบ
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      currentStatus.innerHTML = `
+        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center">
+          <i class="fas fa-exclamation-triangle text-4xl text-yellow-600 mb-3"></i>
+          <p class="text-yellow-800 font-medium mb-4">ยังไม่มีรอบที่เปิดอยู่</p>
+          <button onclick="ShiftManager.showOpenShiftModal()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg">
+            <i class="fas fa-play mr-2"></i>เปิดรอบใหม่
+          </button>
+        </div>
+      `;
+    }
+  }
+
+  // แสดงประวัติรอบ
+  const shiftsList = document.getElementById('shiftsList');
+  if (!shiftsList) return;
+
+  const shifts = ShiftManager.getShiftsHistory();
+  
+  if (shifts.length === 0) {
+    shiftsList.innerHTML = `
+      <div class="text-center py-8 text-gray-500">
+        <i class="fas fa-history text-4xl mb-2"></i>
+        <p>ยังไม่มีประวัติรอบการขาย</p>
+      </div>
+    `;
+    return;
+  }
+
+  shiftsList.innerHTML = '';
+  shifts.forEach(shift => {
+    const shiftItem = document.createElement('div');
+    shiftItem.className = 'bg-white shadow-md rounded-xl p-4 cursor-pointer hover:shadow-lg transition';
+    shiftItem.onclick = () => this.showShiftDetail(shift);
+
+    const duration = ShiftManager.getShiftDuration(shift.openTime, shift.closeTime);
+    const differenceClass = shift.difference > 0 ? 'text-green-600' : shift.difference < 0 ? 'text-red-600' : 'text-gray-600';
+
+    shiftItem.innerHTML = `
+      <div class="flex justify-between items-center">
+        <div>
+          <div class="font-bold text-gray-800">รอบที่ ${shift.shiftNumber} - ${shift.employeeName}</div>
+          <div class="text-sm text-gray-600">
+            ${new Date(shift.date).toLocaleDateString('th-TH', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}
+          </div>
+          <div class="text-sm text-gray-500 mt-1">
+            <i class="fas fa-clock mr-1"></i>${new Date(shift.openTime).toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'})} - ${new Date(shift.closeTime).toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'})}
+            <span class="mx-2">•</span>
+            ${duration}
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-xl font-bold text-gray-900">${Utils.formatCurrency(shift.sales.total)}</div>
+          <div class="text-sm text-gray-600">${shift.sales.bills} บิล</div>
+          <div class="text-sm ${differenceClass} font-medium">
+            ${shift.difference > 0 ? '+' : ''}${shift.difference !== 0 ? Utils.formatCurrency(shift.difference) : 'พอดี'}
+          </div>
+        </div>
+      </div>
+    `;
+
+    shiftsList.appendChild(shiftItem);
+  });
+},
+
+// Filter shifts by date
+filterShiftsByDate() {
+  const dateFilter = document.getElementById('shiftsDateFilter').value;
+  if (!dateFilter) {
+    this.loadShiftsList();
+    return;
+  }
+
+  const filterDate = new Date(dateFilter).toDateString();
+  const shifts = ShiftManager.getShiftsHistory().filter(s => 
+    new Date(s.date).toDateString() === filterDate
+  );
+
+  const shiftsList = document.getElementById('shiftsList');
+  if (shifts.length === 0) {
+    shiftsList.innerHTML = `
+      <div class="text-center py-8 text-gray-500">
+        <i class="fas fa-search text-4xl mb-2"></i>
+        <p>ไม่พบรอบการขายในวันที่เลือก</p>
+      </div>
+    `;
+    return;
+  }
+
+  // แสดงรายการที่กรอง
+  shiftsList.innerHTML = '';
+  shifts.forEach(shift => {
+    // ใช้โค้ดเดียวกับ loadShiftsList
+    const shiftItem = document.createElement('div');
+    // ... (copy code จาก loadShiftsList)
+  });
+},
+
+// Show shift detail
+showShiftDetail(shift) {
+  ShiftManager.showCloseReport(shift);
+},
 
   // Reports Page
   createReportsPage() {
