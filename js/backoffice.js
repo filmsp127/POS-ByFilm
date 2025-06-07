@@ -310,7 +310,7 @@ const BackOffice = {
                                     <th class="p-3 text-right">ราคาขาย</th>
                                     <th class="p-3 text-right">กำไร</th>
                                     <th class="p-3 text-right">สต็อค</th>
-                                    <th class="p-3 text-center">จัดการ</th>
+                                    <th class="p-3 text-center" style="min-width: 120px;">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody id="productsTableBody">
@@ -910,17 +910,17 @@ const BackOffice = {
             ${product.stock}
           </span>
         </td>
-        <td class="p-3 text-center">
-  <div class="flex justify-center gap-2">
-    <button onclick="BackOffice.editProduct(${
+        <td class="p-3 text-center" style="min-width: 120px;">
+  <div class="flex justify-center gap-1">
+    <button type="button" onclick="event.stopPropagation(); BackOffice.editProduct(${
       product.id
-    })" class="text-blue-600 hover:text-blue-700 p-2 hover:bg-blue-50 rounded-lg transition">
-      <i class="fas fa-edit"></i>
+    })" class="inline-flex items-center justify-center w-10 h-10 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition">
+      <i class="fas fa-edit pointer-events-none"></i>
     </button>
-    <button onclick="BackOffice.deleteProduct(${
+    <button type="button" onclick="event.stopPropagation(); BackOffice.deleteProduct(${
       product.id
-    })" class="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition">
-      <i class="fas fa-trash"></i>
+    })" class="inline-flex items-center justify-center w-10 h-10 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition">
+      <i class="fas fa-trash pointer-events-none"></i>
     </button>
   </div>
 </td>
@@ -1227,18 +1227,16 @@ const BackOffice = {
                         ${product.stock}
                     </span>
                 </td>
-                <td class="p-3 text-center">
-                    <button onclick="BackOffice.editProduct(${
-                      product.id
-                    })" class="text-blue-600 hover:text-blue-700 mr-2">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button onclick="BackOffice.deleteProduct(${
-                      product.id
-                    })" class="text-red-600 hover:text-red-700">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
+                <td class="p-3 text-center" style="min-width: 120px;">
+  <div class="flex justify-center gap-1">
+    <button type="button" onclick="event.stopPropagation(); BackOffice.editProduct(${product.id})" class="inline-flex items-center justify-center w-10 h-10 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition">
+      <i class="fas fa-edit pointer-events-none"></i>
+    </button>
+    <button type="button" onclick="event.stopPropagation(); BackOffice.deleteProduct(${product.id})" class="inline-flex items-center justify-center w-10 h-10 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition">
+      <i class="fas fa-trash pointer-events-none"></i>
+    </button>
+  </div>
+</td>
             `;
       tbody.appendChild(tr);
     });
@@ -1338,18 +1336,16 @@ const BackOffice = {
                 <td class="p-3 text-right text-purple-600 font-medium">${
                   member.points || 0
                 }</td>
-                <td class="p-3 text-center">
-                    <button onclick="BackOffice.editMember(${
-                      member.id
-                    })" class="text-blue-600 hover:text-blue-700 mr-2">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button onclick="BackOffice.deleteMember(${
-                      member.id
-                    })" class="text-red-600 hover:text-red-700">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
+                <td class="p-3 text-center" style="min-width: 120px;">
+  <div class="flex justify-center gap-1">
+    <button type="button" onclick="event.stopPropagation(); BackOffice.editProduct(${product.id})" class="inline-flex items-center justify-center w-10 h-10 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition">
+      <i class="fas fa-edit pointer-events-none"></i>
+    </button>
+    <button type="button" onclick="event.stopPropagation(); BackOffice.deleteProduct(${product.id})" class="inline-flex items-center justify-center w-10 h-10 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition">
+      <i class="fas fa-trash pointer-events-none"></i>
+    </button>
+  </div>
+</td>
             `;
       tbody.appendChild(tr);
     });
