@@ -7,6 +7,7 @@ const App = {
     cart: [],
     sales: [],
     members: [],
+    shifts: [],
     currentCategory: "all",
     currentStoreId: null,
     settings: {
@@ -136,6 +137,7 @@ const App = {
       Cart.init();
       Payment.init();
       BackOffice.init();
+      ShiftManager.init();
 
       // Update sync status display
 setInterval(() => {
@@ -1022,6 +1024,10 @@ setInterval(() => {
 
       // Save to state first
       this.state.sales.push(sale);
+      // Add to current shift (เพิ่มโค้ดนี้)
+if (window.ShiftManager && ShiftManager.isShiftOpen()) {
+  ShiftManager.addSaleToShift(sale);
+}
 
       // Update stock
       sale.items.forEach((item) => {
