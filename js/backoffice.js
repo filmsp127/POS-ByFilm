@@ -715,7 +715,41 @@ async refreshSales() {
                             </div>
                         </div>
                     </div>
-
+// เพิ่มในส่วน Settings Page
+<div class="bg-white shadow-md rounded-xl p-6">
+  <h3 class="text-lg font-bold text-gray-800 mb-4">
+    <i class="fas fa-lock mr-2 text-red-600"></i>ความปลอดภัย
+  </h3>
+  <div class="space-y-4">
+    <div>
+      <label class="text-gray-700 text-sm">เวลาก่อนล็อคหน้าจอ (นาที)</label>
+      <select id="autoLockTime" class="w-full p-2 rounded-lg border border-gray-300 text-gray-800">
+        <option value="30">30 นาที</option>
+        <option value="60">1 ชั่วโมง</option>
+        <option value="120">2 ชั่วโมง</option>
+        <option value="240">4 ชั่วโมง</option>
+        <option value="480">8 ชั่วโมง</option>
+        <option value="never">ไม่ล็อคอัตโนมัติ</option>
+      </select>
+    </div>
+    
+    <div>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" id="lockOnAppSwitch" checked
+               class="rounded text-blue-600">
+        <span class="text-gray-700">ล็อคเมื่อออกจากแอพ</span>
+      </label>
+      <div class="text-xs text-gray-500 mt-1">ล็อคหน้าจอเมื่อสลับไปใช้แอพอื่นนานเกิน 30 วินาที</div>
+    </div>
+    
+    <div>
+      <button onclick="Auth.testPinEntry()" 
+              class="w-full bg-gray-100 hover:bg-gray-200 py-2 rounded-lg text-gray-800 transition">
+        <i class="fas fa-key mr-2"></i>ทดสอบการใส่ PIN
+      </button>
+    </div>
+  </div>
+</div>
                     <!-- Receipt Settings -->
                     <div class="bg-white shadow-md rounded-xl p-6">
                         <h3 class="text-lg font-bold text-gray-800 mb-4">
@@ -2032,6 +2066,13 @@ async refreshSales() {
       settings.receipt?.showPhone !== false;
     document.getElementById("showStoreLogo").checked =
       settings.receipt?.showLogo !== false;
+    // เพิ่มส่วนนี้ - Load Security Settings
+  if (document.getElementById("autoLockTime")) {
+    document.getElementById("autoLockTime").value = settings.autoLockTime || "120";
+  }
+  if (document.getElementById("lockOnAppSwitch")) {
+    document.getElementById("lockOnAppSwitch").checked = settings.lockOnAppSwitch !== false;
+  }
 
     // Load logo preview
     if (settings.logoBlackWhite) {
@@ -2102,6 +2143,8 @@ async refreshSales() {
       tax: parseFloat(document.getElementById("taxRate").value),
       memberDiscount: parseFloat(document.getElementById("memberDiscount").value),
       pointRate: parseInt(document.getElementById("pointRate").value),
+      autoLockTime: document.getElementById("autoLockTime").value,
+      lockOnAppSwitch: document.getElementById("lockOnAppSwitch").checked,
     };
 
     // Receipt settings
