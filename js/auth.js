@@ -1,396 +1,288 @@
-// Authentication Module - ปรับปรุงใหม่
+// Authentication Module
 const Auth = {
   currentUser: null,
   loginAttempts: 0,
   maxAttempts: 5,
   lockoutTime: 300000, // 5 minutes
   lastLockout: null,
-  useFirebase: true,
-  lastActivityTime: Date.now(),
-  isAppActive: true,
+  useFirebase: true, // Toggle between Firebase and local auth
 
   init() {
     if (this.useFirebase) {
+      // Firebase handles auth state, no need to load local state
       this.setupAutoLock();
-      this.setupAppStateDetection();
     } else {
       this.loadAuthState();
       this.setupAutoLock();
     }
   },
 
-  // ตรวจจับการออกจากแอพ
-  setupAppStateDetection() {
-    // ตรวจจับเมื่อเปลี่ยนแท็บหรือซ่อนหน้าต่าง
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        // แอพถูกซ่อน (switch ไปแอพอื่น)
-        this.isAppActive = false;
-        console.log('แอพถูกซ่อน - จะล็อคเมื่อกลับมา');
+  // Check if user is authenticated
+  isAuthenticated() {
+    if (this.useFirebase) {
+      return FirebaseService.isAuthenticated();
+    }
+    return this.currentUser !== null && this.currentUser.authenticated === true;
+  },
+
+  // Check if first time - for Firebase, check if user needs to sign up
+  isFirstTimeLogin() {
+    if (this.useFirebase) {
+      return !FirebaseService.getCurrentUser();
+    }
+    const settings = App.getSettings();
+    return !settings.auth || !settings.auth.isSetup;
+  },
+
+  // Load authentication state from storage
+  loadAuthState() {
+    try {
+      const authData = localStorage.getItem("pos_auth_state");
+      if (authData) {
+        const data = JSON.parse(authData);
+
+        // Check if session is still valid (24 hours)
+        const sessionAge = Date.now() - (data.loginTime || 0);
+        const maxSessionAge = 24 * 60 * 60 * 1000; // 24 hours
+
+        if (sessionAge < maxSessionAge && data.authenticated) {
+          this.currentUser = data;
+        } else {
+          this.logout();
+        }
+      }
+    } catch (error) {
+      console.error("Error loading auth state:", error);
+      this.logout();
+    }
+  },
+
+  // Save authentication state
+  saveAuthState() {
+    try {
+      if (this.currentUser) {
+        localStorage.setItem(
+          "pos_auth_state",
+          JSON.stringify(this.currentUser)
+        );
       } else {
-        // กลับมาที่แอพ
-        if (!this.isAppActive) {
-          // ถ้าออกไปนานเกิน 30 วินาที ให้ล็อค
-          const awayTime = Date.now() - this.lastActivityTime;
-          if (awayTime > 30000) { // 30 วินาที
-            console.log('ออกจากแอพนานเกินไป - ล็อคหน้าจอ');
-            this.showPinLogin();
-          }
-        }
-        this.isAppActive = true;
-        this.lastActivityTime = Date.now();
+        localStorage.removeItem("pos_auth_state");
       }
-    });
+    } catch (error) {
+      console.error("Error saving auth state:", error);
+    }
+  },
 
-    // ตรวจจับการปิดแอพบนมือถือ
-    window.addEventListener('blur', () => {
-      this.isAppActive = false;
-    });
-
-    window.addEventListener('focus', () => {
-      if (!this.isAppActive) {
-        const awayTime = Date.now() - this.lastActivityTime;
-        if (awayTime > 30000) {
-          this.showPinLogin();
-        }
-      }
-      this.isAppActive = true;
-      this.lastActivityTime = Date.now();
-    });
-
-    // ตรวจจับการ minimize หรือ background บน mobile
-    window.addEventListener('pagehide', () => {
-      this.isAppActive = false;
-    });
-
-    window.addEventListener('pageshow', () => {
-      if (!this.isAppActive) {
+  // Show login interface
+  showLogin() {
+    if (this.useFirebase) {
+      this.showFirebaseLogin();
+    } else {
+      if (this.isFirstTimeLogin()) {
+        this.showFirstTimeSetup();
+      } else {
         this.showPinLogin();
       }
-      this.isAppActive = true;
-    });
-  },
-
-  // ปรับปรุง Hash function ให้คงที่และเข้าใจง่าย
-  hashPin(pin) {
-    // ใช้วิธีง่ายๆ แต่คงที่ - เข้ารหัสเป็น base64
-    const pinString = String(pin).padStart(6, '0'); // ทำให้เป็น 6 หลักเสมอ
-    return btoa(pinString + '_SP24POS_SALT'); // เข้ารหัส base64
-  },
-
-  // ปรับปรุงการ verify PIN
-  async verifyPin(userId, hashedPin) {
-    try {
-      const userDoc = await this.db.collection("users").doc(userId).get();
-      if (userDoc.exists) {
-        const userData = userDoc.data();
-        
-        // Debug log (ลบออกในตอน production)
-        console.log('Stored PIN hash:', userData.pin);
-        console.log('Input PIN hash:', hashedPin);
-        
-        // เปรียบเทียบแบบ string ตรงๆ
-        return userData.pin === hashedPin;
-      }
-      return false;
-    } catch (error) {
-      console.error("Verify PIN error:", error);
-      
-      // ถ้า Firebase error ให้ตรวจสอบจาก local storage
-      const localUser = this.getLocalUserData();
-      if (localUser && localUser.pin === hashedPin) {
-        return true;
-      }
-      
-      return false;
     }
   },
 
-  // เก็บ PIN ใน local storage เป็น backup
-  saveLocalUserData(userId, pin) {
-    const userData = {
-      userId: userId,
-      pin: pin,
-      savedAt: Date.now()
-    };
-    localStorage.setItem('pos_user_backup', JSON.stringify(userData));
-  },
-
-  getLocalUserData() {
-    try {
-      const saved = localStorage.getItem('pos_user_backup');
-      return saved ? JSON.parse(saved) : null;
-    } catch (error) {
-      return null;
-    }
-  },
-
-  // ปรับปรุง Process PIN login
-  async processPinLogin(event) {
-    event.preventDefault();
-
-    const pin = document.getElementById("loginPin").value;
-    const user = Auth.getCurrentUser();
-
-    if (!pin || pin.length !== 6) {
-      Utils.showToast("กรุณาใส่รหัส PIN 6 หลัก", "error");
-      return;
-    }
-
-    // Show loading
-    Utils.showLoading("กำลังตรวจสอบ PIN...");
-
-    try {
-      const hashedPin = this.hashPin(pin);
-      
-      // ลอง verify หลายวิธี
-      let isValidPin = false;
-      
-      // วิธีที่ 1: ตรวจสอบจาก Firebase
-      try {
-        isValidPin = await FirebaseService.verifyPin(user.uid, hashedPin);
-      } catch (error) {
-        console.log('Firebase verify failed, trying local...');
-      }
-      
-      // วิธีที่ 2: ถ้า Firebase fail ให้ใช้ local backup
-      if (!isValidPin) {
-        const localData = this.getLocalUserData();
-        if (localData && localData.pin === hashedPin) {
-          isValidPin = true;
-        }
-      }
-
-      Utils.hideLoading();
-
-      if (isValidPin) {
-        // Success
-        this.loginAttempts = 0;
-        this.lastActivityTime = Date.now();
-        this.closeAuthModal();
-        Utils.showToast("เข้าสู่ระบบสำเร็จ!", "success");
-
-        // บันทึก PIN ใน local storage เป็น backup
-        this.saveLocalUserData(user.uid, hashedPin);
-
-        // Initialize main app
-        setTimeout(() => {
-          App.initializeApp();
-        }, 500);
-      } else {
-        // Failed
-        this.loginAttempts++;
-
-        if (this.loginAttempts >= this.maxAttempts) {
-          this.lastLockout = Date.now();
-          this.showLockoutMessage();
-        } else {
-          Utils.showToast(
-            `รหัส PIN ไม่ถูกต้อง (เหลือ ${
-              this.maxAttempts - this.loginAttempts
-            } ครั้ง)`,
-            "error"
-          );
-
-          // Clear and refocus PIN input
-          const pinInput = document.getElementById("loginPin");
-          if (pinInput) {
-            pinInput.value = "";
-            pinInput.focus();
-          }
-        }
-      }
-    } catch (error) {
-      Utils.hideLoading();
-      console.error('PIN login error:', error);
-      Utils.showToast("เกิดข้อผิดพลาด กรุณาลองใหม่", "error");
-    }
-  },
-
-  // ปรับปรุง Auto-lock ให้นานขึ้น
-  setupAutoLock() {
-    let timeout;
-    const lockAfter = 120 * 60 * 1000; // 2 ชั่วโมง (เดิม 30 นาที)
-
-    const resetTimer = () => {
-      clearTimeout(timeout);
-      this.lastActivityTime = Date.now();
-      
-      if (this.isAuthenticated() && this.isAppActive) {
-        timeout = setTimeout(() => {
-          // ล็อคเฉพาะเมื่อแอพ active อยู่
-          if (this.isAppActive) {
-            this.logout();
-            Utils.showToast("ระบบล็อคอัตโนมัติเนื่องจากไม่มีการใช้งาน", "info");
-            this.showLogin();
-          }
-        }, lockAfter);
-      }
-    };
-
-    // Reset timer on user activity
-    ["mousedown", "mousemove", "keypress", "scroll", "touchstart", "click"].forEach(
-      (event) => {
-        document.addEventListener(event, resetTimer, true);
-      }
-    );
-
-    // Start timer
-    resetTimer();
-  },
-
-  // เพิ่ม Quick PIN entry buttons
-  showPinLogin() {
-    const user = Auth.getCurrentUser();
-    const store = Auth.getCurrentStore();
-    const displayName = user ? user.username : "ผู้ใช้";
-    const storeName = store ? store.name : "ร้านค้า";
-
+  // Show Firebase login/signup - ปรับ UI ให้ responsive
+  showFirebaseLogin() {
     const content = `
-      <div class="p-4 sm:p-8 max-w-sm mx-auto">
-        <div class="text-center mb-6 sm:mb-8">
-          <div class="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i class="fas fa-lock text-xl sm:text-2xl text-white"></i>
+        <div class="w-full h-full overflow-y-auto">
+          <div class="p-4 sm:p-8 max-w-md mx-auto pb-20"> <!-- เพิ่ม pb-20 เพื่อให้มีพื้นที่ด้านล่าง -->
+            <div class="text-center mb-6 sm:mb-8">
+              <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-store text-2xl sm:text-3xl text-white"></i>
+              </div>
+              <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">SP24 POS</h1>
+              <p class="text-sm sm:text-base text-gray-600">ระบบขายหน้าร้านสำหรับทุกธุรกิจ</p>
+            </div>
+  
+            <!-- Login/Signup Tabs -->
+            <div class="flex bg-gray-100 rounded-lg p-1 mb-4 sm:mb-6">
+              <button onclick="Auth.switchTab('login')" id="loginTab" 
+                      class="flex-1 py-2 px-3 sm:px-4 rounded-md text-sm font-medium transition bg-white text-gray-800 shadow">
+                เข้าสู่ระบบ
+              </button>
+              <button onclick="Auth.switchTab('signup')" id="signupTab"
+                      class="flex-1 py-2 px-3 sm:px-4 rounded-md text-sm font-medium transition text-gray-600">
+                สมัครสมาชิก
+              </button>
+            </div>
+  
+            <!-- Login Form -->
+            <form id="loginForm" onsubmit="Auth.processFirebaseLogin(event)" class="space-y-3 sm:space-y-4">
+              <div>
+                <label class="text-gray-700 text-sm font-medium">อีเมล</label>
+                <input type="email" id="loginEmail" required
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="example@email.com">
+              </div>
+    
+              <div>
+                <label class="text-gray-700 text-sm font-medium">รหัสผ่าน</label>
+                <input type="password" id="loginPassword" required
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="••••••••">
+              </div>
+    
+              <button type="submit" class="w-full btn-primary py-2 sm:py-3 rounded-lg text-white font-medium">
+                <i class="fas fa-sign-in-alt mr-2"></i>เข้าสู่ระบบ
+              </button>
+            </form>
+  
+            <!-- Signup Form -->
+            <form id="signupForm" onsubmit="Auth.processFirebaseSignup(event)" class="space-y-3 sm:space-y-4 hidden">
+              <div>
+                <label class="text-gray-700 text-sm font-medium">ชื่อ-นามสกุล *</label>
+                <input type="text" id="signupName" required
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="ชื่อของคุณ">
+              </div>
+    
+              <div>
+                <label class="text-gray-700 text-sm font-medium">อีเมล *</label>
+                <input type="email" id="signupEmail" required
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="example@email.com">
+              </div>
+    
+              <div>
+                <label class="text-gray-700 text-sm font-medium">รหัสผ่าน *</label>
+                <input type="password" id="signupPassword" required minlength="6"
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="••••••••">
+                <div class="text-xs text-gray-500 mt-1">อย่างน้อย 6 ตัวอักษร</div>
+              </div>
+    
+              <div>
+                <label class="text-gray-700 text-sm font-medium">ยืนยันรหัสผ่าน *</label>
+                <input type="password" id="signupPasswordConfirm" required minlength="6"
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="••••••••">
+              </div>
+              
+              <div>
+                <label class="text-gray-700 text-sm font-medium">ชื่อร้าน *</label>
+                <input type="text" id="signupStoreName" required
+                       class="w-full mt-1 p-2 sm:p-3 rounded-lg border border-gray-300 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="ชื่อร้านของคุณ">
+              </div>
+              
+              <div>
+                <label class="text-gray-700 text-sm font-medium">ตั้ง PIN 6 หลัก *</label>
+                <input type="password" id="signupPin" required pattern="[0-9]{6}" maxlength="6"
+                       class="w-full mt-1 p-2 sm:p-3 text-xl text-center rounded-lg border border-gray-300 text-gray-800 tracking-widest focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="••••••">
+                <div class="text-xs text-gray-500 mt-1">ใช้สำหรับเข้าระบบครั้งต่อไป</div>
+              </div>
+    
+              <button type="submit" class="w-full btn-primary py-2 sm:py-3 rounded-lg text-white font-medium">
+                <i class="fas fa-user-plus mr-2"></i>สมัครสมาชิก
+              </button>
+            </form>
           </div>
-          <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-1">ใส่รหัส PIN</h2>
-          <p class="text-sm sm:text-base text-gray-600">${displayName}</p>
-          <p class="text-xs sm:text-sm text-gray-500">${storeName}</p>
         </div>
-
-        <form onsubmit="Auth.processPinLogin(event)" class="space-y-4 sm:space-y-6">
-          <div>
-            <div class="flex justify-center items-center gap-2 mb-4">
-              ${[1,2,3,4,5,6].map(i => `
-                <div id="pin-dot-${i}" class="w-3 h-3 rounded-full bg-gray-300 transition-all duration-200"></div>
-              `).join('')}
-            </div>
-            
-            <input type="password" id="loginPin" required pattern="[0-9]{6}" maxlength="6"
-                   class="hidden"
-                   oninput="Auth.updatePinDots(this.value)">
-            
-            <!-- Big Number Pad -->
-            <div class="grid grid-cols-3 gap-3 mt-6">
-              ${[1,2,3,4,5,6,7,8,9,'clear',0,'⌫'].map(key => {
-                if (key === 'clear') {
-                  return `<button type="button" onclick="Auth.clearPin()" 
-                           class="h-16 rounded-2xl bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-all duration-200 transform hover:scale-105 active:scale-95">
-                    <i class="fas fa-redo text-sm"></i>
-                  </button>`;
-                } else if (key === '⌫') {
-                  return `<button type="button" onclick="Auth.backspacePin()" 
-                           class="h-16 rounded-2xl bg-red-100 hover:bg-red-200 text-red-600 font-medium transition-all duration-200 transform hover:scale-105 active:scale-95">
-                    <i class="fas fa-backspace"></i>
-                  </button>`;
-                } else {
-                  return `<button type="button" onclick="Auth.appendPin('${key}')" 
-                           class="h-16 rounded-2xl bg-white hover:bg-gray-50 text-2xl font-semibold text-gray-800 shadow-sm hover:shadow-md transition-all duration-200 transform hover:scale-105 active:scale-95">
-                    ${key}
-                  </button>`;
-                }
-              }).join('')}
-            </div>
-          </div>
-
-          <button type="submit" id="submitPinBtn" disabled
-                  class="w-full btn-primary py-3 rounded-xl text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200">
-            <i class="fas fa-unlock mr-2"></i>ยืนยัน
-          </button>
-
-          <div class="text-center">
-            <button type="button" onclick="Auth.showResetPin()" 
-                    class="text-gray-500 hover:text-gray-700 text-sm">
-              ลืมรหัส PIN?
-            </button>
-          </div>
-        </form>
-      </div>
-    `;
+      `;
 
     const modal = document.createElement("div");
     modal.id = "authModal";
     modal.className =
       "fixed inset-0 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 z-50 flex items-center justify-center p-4";
     modal.innerHTML = `
-      <div class="bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-        ${content}
-      </div>
-    `;
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+          ${content}
+        </div>
+      `;
 
-    document.getElementById("modalsContainer").appendChild(modal);
-    
-    // Focus on hidden input
-    setTimeout(() => {
-      document.getElementById('loginPin').focus();
-    }, 100);
+    document.body.appendChild(modal);
   },
 
-  // Helper functions for PIN input
-  updatePinDots(value) {
-    const length = value.length;
-    
-    // Update dots
-    for (let i = 1; i <= 6; i++) {
-      const dot = document.getElementById(`pin-dot-${i}`);
-      if (i <= length) {
-        dot.classList.remove('bg-gray-300');
-        dot.classList.add('bg-indigo-600', 'scale-125');
+  // Switch between login/signup tabs
+  // Switch between login/signup tabs
+  switchTab(tab) {
+    const loginTab = document.getElementById("loginTab");
+    const signupTab = document.getElementById("signupTab");
+    const loginForm = document.getElementById("loginForm");
+    const signupForm = document.getElementById("signupForm");
+    // ---> เพิ่มส่วนนี้: ดึง authModal เข้ามาเพื่อเพิ่ม/ลบ class
+    const authModal = document.getElementById('authModal');
+
+    if (tab === "login") {
+      loginTab.className =
+        "flex-1 py-2 px-3 sm:px-4 rounded-md text-sm font-medium transition bg-white text-gray-800 shadow";
+      signupTab.className =
+        "flex-1 py-2 px-3 sm:px-4 rounded-md text-sm font-medium transition text-gray-600";
+      loginForm.classList.remove("hidden");
+      signupForm.classList.add("hidden");
+      // ---> เพิ่มส่วนนี้: กำหนด class สำหรับหน้า Login
+      if (authModal) {
+        authModal.classList.add('login-view');
+        authModal.classList.remove('signup-view');
+      }
+    } else {
+      signupTab.className =
+        "flex-1 py-2 px-3 sm:px-4 rounded-md text-sm font-medium transition bg-white text-gray-800 shadow";
+      loginTab.className =
+        "flex-1 py-2 px-3 sm:px-4 rounded-md text-sm font-medium transition text-gray-600";
+      signupForm.classList.remove("hidden");
+      loginForm.classList.add("hidden");
+      // ---> เพิ่มส่วนนี้: กำหนด class สำหรับหน้า Signup
+      if (authModal) {
+        authModal.classList.add('signup-view');
+        authModal.classList.remove('login-view');
+      }
+    }
+  },
+
+  // Process Firebase login - เพิ่ม error handling
+  async processFirebaseLogin(event) {
+    event.preventDefault();
+
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+
+    if (!email || !password) {
+      Utils.showToast("กรุณากรอกอีเมลและรหัสผ่าน", "error");
+      return;
+    }
+
+    Utils.showLoading("กำลังเข้าสู่ระบบ...");
+
+    try {
+      const result = await FirebaseService.signIn(email, password);
+
+      if (result.success) {
+        Utils.hideLoading();
+        Utils.showToast("เข้าสู่ระบบสำเร็จ!", "success");
+
+        // Close modal and reload
+        this.closeAuthModal();
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
       } else {
-        dot.classList.remove('bg-indigo-600', 'scale-125');
-        dot.classList.add('bg-gray-300');
+        Utils.hideLoading();
+        Utils.showToast(`เข้าสู่ระบบไม่สำเร็จ: ${result.error}`, "error");
       }
-    }
-
-    // Enable/disable submit button
-    const submitBtn = document.getElementById('submitPinBtn');
-    if (submitBtn) {
-      submitBtn.disabled = length !== 6;
-    }
-
-    // Auto submit when 6 digits
-    if (length === 6) {
-      setTimeout(() => {
-        const form = document.querySelector('#authModal form');
-        if (form) {
-          form.dispatchEvent(new Event('submit'));
-        }
-      }, 200);
+    } catch (error) {
+      Utils.hideLoading();
+      console.error("Login error:", error);
+      Utils.showToast("เกิดข้อผิดพลาดในการเข้าสู่ระบบ", "error");
     }
   },
 
-  appendPin(digit) {
-    const input = document.getElementById('loginPin');
-    if (input.value.length < 6) {
-      input.value += digit;
-      this.updatePinDots(input.value);
-      
-      // Haptic feedback
-      if (navigator.vibrate) {
-        navigator.vibrate(10);
-      }
-    }
-  },
-
-  backspacePin() {
-    const input = document.getElementById('loginPin');
-    input.value = input.value.slice(0, -1);
-    this.updatePinDots(input.value);
-  },
-
-  clearPin() {
-    const input = document.getElementById('loginPin');
-    input.value = '';
-    this.updatePinDots('');
-  },
-
-  // Process Firebase signup with PIN backup
+  // Process Firebase signup - เพิ่ม error handling และ store creation
   async processFirebaseSignup(event) {
     event.preventDefault();
 
     const name = document.getElementById("signupName").value.trim();
     const email = document.getElementById("signupEmail").value.trim();
     const password = document.getElementById("signupPassword").value;
-    const passwordConfirm = document.getElementById("signupPasswordConfirm").value;
+    const passwordConfirm = document.getElementById(
+      "signupPasswordConfirm"
+    ).value;
     const storeName = document.getElementById("signupStoreName").value.trim();
     const pin = document.getElementById("signupPin").value;
 
@@ -405,6 +297,11 @@ const Auth = {
       return;
     }
 
+    if (password.length < 6) {
+      Utils.showToast("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร", "error");
+      return;
+    }
+
     if (!/^\d{6}$/.test(pin)) {
       Utils.showToast("PIN ต้องเป็นตัวเลข 6 หลัก", "error");
       return;
@@ -413,19 +310,14 @@ const Auth = {
     Utils.showLoading("กำลังสร้างบัญชี...");
 
     try {
-      const hashedPin = this.hashPin(pin);
-      
       // Create user account
       const result = await FirebaseService.signUp(email, password, {
         name,
-        pin: hashedPin,
-        displayName: name,
+        pin: this.hashPin(pin),
+        displayName: name, // เพิ่ม displayName
       });
 
       if (result.success) {
-        // Save PIN backup locally
-        this.saveLocalUserData(result.user.uid, hashedPin);
-
         // Update display name
         await result.user.updateProfile({ displayName: name });
 
@@ -441,6 +333,7 @@ const Auth = {
           Utils.hideLoading();
           Utils.showToast("สร้างบัญชีและร้านสำเร็จ!", "success");
 
+          // รอสักครู่ให้ Firebase update
           setTimeout(() => {
             this.closeAuthModal();
             location.reload();
@@ -451,6 +344,8 @@ const Auth = {
         }
       } else {
         Utils.hideLoading();
+
+        // แปลง error message
         let errorMessage = result.error;
         if (result.error.includes("email-already-in-use")) {
           errorMessage = "อีเมลนี้ถูกใช้งานแล้ว";
@@ -465,10 +360,12 @@ const Auth = {
     } catch (error) {
       Utils.hideLoading();
       console.error("Signup error:", error);
-      Utils.showToast("เกิดข้อผิดพลาดในการสมัครสมาชิก: " + error.message, "error");
+      Utils.showToast(
+        "เกิดข้อผิดพลาดในการสมัครสมาชิก: " + error.message,
+        "error"
+      );
     }
   },
-};
 
   // Switch to local mode (offline)
   switchToLocalMode() {
